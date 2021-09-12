@@ -1,0 +1,139 @@
+#copied from project in tma4220
+
+import numpy as np
+
+def quadrature1d(a, b, Nq, g):
+    """
+        Calculate Gaussian quadrature in 1d over the interval [a,b],
+        for the function g using Nq quadrature points.
+        a - startpoint
+        b - endpoint
+        Nq - number of quadrature points must be from the list [1, 2, 3, 4].
+        g - function to integrate
+    """
+    x1=(b-a)/2
+    x2=(b+a)/2
+    if Nq==1:
+        I=g(x2)*2
+    elif Nq==2:
+        I=g(-x1/np.sqrt(3)+x2)+g(x1/np.sqrt(3)+x2)
+    elif Nq==3:
+        I=8*g(x2)/9+5*(g(x2+x1*np.sqrt(3/5))+g(x2-x1*np.sqrt(3/5)))/9
+    elif Nq==4:
+        w1=(18-np.sqrt(30))/36
+        w2=(18+np.sqrt(30))/36
+        y1=np.sqrt((3+2*np.sqrt(6/5))/7)
+        y2=np.sqrt((3-2*np.sqrt(6/5))/7)
+        I=w1*g(x2-y1*x1)+w2*g(x2-y2*x1)+w2*g(x2+y2*x1)+w1*g(x2+y1*x1)
+    else:
+        return "error"
+    return I*(b-a)/2
+
+def quadrature1dplane(a, b, Nq, g):
+    """
+        Takes in two points in R2, and a function g. Then approximates the line integral for a straight
+        line between a and b, using Gaussian quadrature with Nq points.
+        a - startpoint in R2
+        b - endpoint in R2
+        Nq - number of quadrature points must be from the list [1, 2, 3, 4].
+        g - function to integrate
+    """
+    mid = [(b[0]+a[0])/2, (b[1]+a[1])/2]                #Coordinates of midpoint between a and b
+    dist = np.sqrt((b[0]-a[0])**2+(b[1]-a[1])**2)/2     #Distance from midpoint to a or b.
+    b2 = [b[0]-mid[0], b[1]-mid[1]]                     #Vector from midpoint to b.
+    if Nq==1:
+        I=g(mid[0], mid[1])*2
+    elif Nq==2:
+        I=g(-b2[0]/np.sqrt(3)+mid[0], -b2[1]/np.sqrt(3)+mid[1])+ \
+            g(b2[0]/np.sqrt(3)+mid[0], b2[1]/np.sqrt(3)+mid[1])
+    elif Nq==3:
+        I=8*g(mid[0], mid[1])/9+5*(g(mid[0]+b2[0]*np.sqrt(3/5),mid[1]+b2[1]*np.sqrt(3/5))+ \
+            g(mid[0]-b2[0]*np.sqrt(3/5),mid[1]-b2[1]*np.sqrt(3/5)))/9
+
+    elif Nq==4:
+        w1=(18-np.sqrt(30))/36
+        w2=(18+np.sqrt(30))/36
+        y1=np.sqrt((3+2*np.sqrt(6/5))/7)
+        y2=np.sqrt((3-2*np.sqrt(6/5))/7)
+        I=w1*g(mid[0]-y1*b2[0], mid[1]-y1*b2[1])+\
+            w2*g(mid[0]-y2*b2[0], mid[1]-y2*b2[1])+ \
+            w2*g(mid[0]+y2*b2[0], mid[1]+y2*b2[1])+ \
+            w1*g(mid[0]+y1*b2[0], mid[1]+y1*b2[1])
+    else:
+        return "error"
+    return I*dist
+
+def quadrature2d(p1, p2, p3, Nq, g):
+    """
+        Calculate Gaussian quadrature over a triangle with corners p1, p2 and p3 for function g.
+        p1 - First vertex of triangle
+        p2 - Second vertex of triangle
+        p3 - third vertex of triangle
+        Nq - number of quadrature points
+        g - pointer to function to integrate
+    """
+
+    #The matrix A stores all information about the transform to the reference element
+    A = [p2[0]-p1[0], p3[0]-p1[0], p2[1]-p1[1], p3[1]-p1[1]]
+
+    if Nq == 1:
+        res = g((A[0]+A[1])/3+p1[0], (A[2]+A[3])/3+p1[1])
+    elif Nq == 3:
+        res = g(0.5*(A[0]+A[1])+p1[0], 0.5*(A[2]+A[3])+p1[1])/3
+        res = res + g(0.5*(A[0])+p1[0], 0.5*(A[2])+p1[1])/3
+        res = res + g(0.5*(A[1])+p1[0], 0.5*(A[3])+p1[1])/3
+    elif Nq ==4:
+        res = (25/48)*g(0.2*(A[0]+A[1])+p1[0], 0.2*(A[2]+A[3])+p1[1])
+        res = res + (25/48)*g(0.2*A[0]+0.6*A[1]+p1[0], 0.2*A[2]+0.6*A[3]+p1[1])
+        res = res + (25/48)*g(0.6*A[0]+0.2*A[1]+p1[0], 0.6*A[2]+0.2*A[3]+p1[1])
+        res = res - (9/16)*g((A[0]+A[1])/3+p1[0], (A[2]+A[3])/3+p1[1])
+
+    return res*(np.abs(A[1]*A[2]-A[0]*A[3]))/2          #Divide by 2 as sum of weights should be 1/2 for the reference element.
+
+if __name__=="__main__":
+    print("Testing for 1d-quadrature with 1d integral: \n")
+    f = lambda x: np.exp(x)
+    I = np.exp(2)-np.exp(1)                                             #Exact value of integral
+    for i in range(4):
+        print("Testing with ", i+1, "quadrature points gives:")
+        I_num = quadrature1dold(1, 2, i+1, f)
+        print("Integral value equal to: ", I_num)
+        print("Absolute error equal to: ", np.abs(I-I_num), '\n')
+
+    print("Testing for 1d-quadrature with line integral method: \n")
+    h = lambda x,y: np.exp(x)
+    a = [1, 0]
+    b = [2, 0]
+    for i in range(4):
+        print("Testing with ", i+1, "quadrature points gives:")
+        I_num = quadrature1d(a, b, i+1, h)
+        print("Integral value equal to: ", I_num)
+        print("Absolute error equal to: ", np.abs(I-I_num), '\n')
+
+    print("Testing for 2d-quadrature with points going clockwise: \n")
+    g = lambda x,y: np.log(x+y)
+    a = [1,0]
+    c = [3,1]
+    b = [3,2]
+    I = 1.16542                                                         #Exact value of integral
+    Nq = [1, 3, 4]
+    for i in range(3):
+        print("Testing with ", Nq[i], "quadrature points gives:")
+        I_num = quadrature2d(a, b, c, Nq[i], g)
+        print("Integral value equal to: ", I_num)
+        print("Absolute error equal to: ", np.abs(I-I_num), '\n')
+
+    print("Testing for 2d-quadrature with points going counter clockwise: \n")
+    g = lambda x,y: np.log(x+y)
+    a = [1,0]
+    b = [3,1]
+    c = [3,2]
+    I = 1.16542                                                         #Exact value of integral
+    Nq = [1, 3, 4]
+    for i in range(3):
+        print("Testing with ", Nq[i], "quadrature points gives:")
+        I_num = quadrature2d(a, b, c, Nq[i], g)
+        print("Integral value equal to: ", I_num)
+        print("Absolute error equal to: ", np.abs(I-I_num), '\n')
+
+
