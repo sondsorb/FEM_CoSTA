@@ -155,21 +155,21 @@ def solve_heat(N, time_steps, u0, g, f, T=1):
     tri = np.linspace(0,1,N+1)
 
     u_prev = u0(tri)
-    for i in range(1,time_steps+1):
-        M,A,F = FEM.discretize_1d_heat(N,tri,f(t=time_steps*k))
+    for time_step in range(1,time_steps+1):
+        M,A,F = FEM.discretize_1d_heat(N,tri,f(t=time_step*k))
         MA = M+A*k
-        ep=1e-10
+        ep=1e-12
         MA[0,0]=k/ep
         MA[-1,-1]=k/ep
-        F[0] = g(t=time_steps*k)[0]/ep
-        F[-1] = g(t=time_steps*k)[1]/ep
+        F[0] = g(t=time_step*k)[0]/ep
+        F[-1] = g(t=time_step*k)[1]/ep
         u_fem = np.linalg.solve(MA, M@u_prev+F*k) #Solve system
         u_prev = u_fem
     return u_fem
 
 def sindres_mfact_test(sol=0):
     '''testing equations from sindres paper.'''
-    alpha = 1
+    alpha = 0.5
     T=1
 
     if sol==0:
@@ -180,7 +180,7 @@ def sindres_mfact_test(sol=0):
         def u_ex(x,t=T): return alpha*(t+x*x/2)
     
     if sol==1:
-        alpha = 1/2
+        alpha = 0
         def f(t):
             def ft(x):
                 return 1-alpha
@@ -194,6 +194,20 @@ def sindres_mfact_test(sol=0):
             return ft
         def u_ex(x,t=T): return (t+alpha+1)**0.5 + 10*x*x*(x-1)*(x+2)
 
+    if sol==3:
+        def f(t):
+            def ft(x):
+                return alpha/(t+0.1)**2*(x*(1-x)+2*((x-1)*np.tanh(x/(t+0.1))-t-0.1))*np.cosh(x/(t+0.1))**-2
+            return ft
+        def u_ex(x,t=T): return 2+alpha*(x-1)*np.tanh(x/(t+0.1))
+
+    if sol==4:
+        def f(t):
+            def ft(x):
+                return 2*np.pi*(np.cos(2*np.pi*t+alpha)-2*np.pi*np.sin(2*np.pi*t+alpha))*np.cos(2*np.pi*x)
+            return ft
+        def u_ex(x,t=T): return 1 + np.sin(2*np.pi*t+alpha)*np.cos(2*np.pi*x)
+
     def u0(x): return u_ex(x,0)
     def g(t): return u_ex(0,t), u_ex(1,t)
     
@@ -203,7 +217,7 @@ def sindres_mfact_test(sol=0):
         u_fem = solve_heat(N,time_steps, u0, g, f, T)
         plt.plot(np.linspace(0,1,N+1), u_fem, label=f'N,ts={N},{time_steps}')
         N*=2
-        time_steps*=4
+        time_steps*=2
     plt.plot(np.linspace(0,1,N+1), u_ex(np.linspace(0,1,N+1)), label='u_ex')
     plt.legend()
     plt.show()
@@ -215,6 +229,8 @@ if __name__ == '__main__':
     sindres_mfact_test()
     sindres_mfact_test(1)
     sindres_mfact_test(2)
+    sindres_mfact_test(3)
+    sindres_mfact_test(4)
     quit()
     abdullah_bug_test()
     test3(2)
