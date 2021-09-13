@@ -25,6 +25,14 @@ def quadrature1d(a, b, Nq, g):
         y1=np.sqrt((3+2*np.sqrt(6/5))/7)
         y2=np.sqrt((3-2*np.sqrt(6/5))/7)
         I=w1*g(x2-y1*x1)+w2*g(x2-y2*x1)+w2*g(x2+y2*x1)+w1*g(x2+y1*x1)
+    elif Nq==5:
+        w1=128/225
+        w2=(322+13*np.sqrt(70))/900
+        w3=(322-13*np.sqrt(70))/900
+        y1=0
+        y2=np.sqrt(5-2*np.sqrt(10/7))/3
+        y3=np.sqrt(5+2*np.sqrt(10/7))/3
+        I=w1*g(x2+y1*x1)+w2*g(x2-y2*x1)+w2*g(x2+y2*x1)+w3*g(x2+y3*x1)+w3*g(x2-y3*x1)
     else:
         return "error"
     return I*(b-a)/2
@@ -94,11 +102,35 @@ if __name__=="__main__":
     print("Testing for 1d-quadrature with 1d integral: \n")
     f = lambda x: np.exp(x)
     I = np.exp(2)-np.exp(1)                                             #Exact value of integral
-    for i in range(4):
+    for i in range(5):
         print("Testing with ", i+1, "quadrature points gives:")
-        I_num = quadrature1dold(1, 2, i+1, f)
+        I_num = quadrature1d(1, 2, i+1, f)
         print("Integral value equal to: ", I_num)
         print("Absolute error equal to: ", np.abs(I-I_num), '\n')
+
+    print("Testing polynomials with 1d-quadrature: \n")
+    for i in range(1,5):
+        f1 = lambda x: x**(2*i+1)
+        f2 = lambda x: x**(2*i+2)
+        I1 = 1/(2*i+2)
+        I2 = 1/(2*i+3)
+        print("Testing with ", i+1, "quadrature points gives:")
+        I1_num = quadrature1d(0, 1, i+1, f1)
+        I2_num = quadrature1d(0, 1, i+1, f2)
+        I3_num = quadrature1d(0, 1, i, f1)
+        print("First integral (should be exact):")
+        print("Integral value equal to: ", I1_num)
+        print("Absolute error equal to: ", np.abs(I1-I1_num), '\n')
+
+        print("Second integral (should not be exact):")
+        print("Integral value equal to: ", I2_num)
+        print("Absolute error equal to: ", np.abs(I2-I2_num), '\n')
+
+        print("First integral with less points (should not be exact):")
+        print("Integral value equal to: ", I1_num)
+        print("Absolute error equal to: ", np.abs(I1-I3_num), '\n')
+
+    quit()
 
     print("Testing for 1d-quadrature with line integral method: \n")
     h = lambda x,y: np.exp(x)
@@ -106,7 +138,7 @@ if __name__=="__main__":
     b = [2, 0]
     for i in range(4):
         print("Testing with ", i+1, "quadrature points gives:")
-        I_num = quadrature1d(a, b, i+1, h)
+        I_num = quadrature1dplane(a, b, i+1, h)
         print("Integral value equal to: ", I_num)
         print("Absolute error equal to: ", np.abs(I-I_num), '\n')
 
