@@ -4,6 +4,6 @@ This repo is currently only used as backup as I work on my project, so not much 
 
 ### Notation
 #### 1D:
-N: number of nodes in the triangulization
+Np: number of nodes in the triangulization
 p: degree of basis polynomials
-M: number of elements (so N = MP+1)
+Ne: number of elements (so N = MP+1)
