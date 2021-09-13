@@ -37,6 +37,61 @@ def discretize_1d_poisson(N, tri, f):
     return A, F
 
 
+def discretize_1d_poisson_v2(N, tri, f, p=1):
+    '''N number of grid nodes
+    tri: triangulation, form [a0,a1,a2,a3,...aN]
+    f: source function
+    p: degree of test functions'''
+    assert (N-1)%p==0
+
+    F = np.zeros((N))
+    A = np.zeros((N,N))
+    h = 1/(N-1)
+
+
+    for k in range(0,N-p,p): # elementwise: for element [a_k, a_k+p]
+        # We loop through all the contributions to A
+        for i in range(p+1):
+            for j in range(p+1):
+                def integrand(x):
+                    # this integrand is nabla(phi_i)*nabla(phi_j)
+                    # formula: from rmnotes pg7
+                    nphi = 0 #nabla(phi_i)
+                    nphj = 0 #nabla(phi_j)
+                    for m in range(p+1):
+                        if m!=i:
+                            producti=1/(tri[k+i]-tri[k+m])
+                            for l in range(p+1):
+                                if l!=i and l!=m:
+                                    producti *= (x-tri[k+l])/(tri[k+i]-tri[k+l])
+                            nphi += producti
+                        if m!=j:
+                            productj=1/(tri[k+j]-tri[k+m])
+                            for l in range(p+1):
+                                if l!=j and l!=m:
+                                    productj *= (x-tri[k+l])/(tri[k+j]-tri[k+l])
+                            nphj += productj
+                    return nphi*nphj
+                A[k+i,k+j] += quadrature.quadrature1d(tri[k],tri[k+p],p, integrand)
+            def integrand(x):
+                # this is the integrand phi_i*f
+                phi = 1
+                for j in range(p+1):
+                    if j!=i:
+                        phi *= (x-tri[k+j])/(tri[k+i]-tri[k+j])
+                return phi*f(x)
+            F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],4, integrand)
+        #print('a', integrand_1(tri[i])-1)
+        #print('b', integrand_1(tri[i+1])-0)
+        #print('c', integrand_2(tri[i])-0)
+        #print('d', integrand_2(tri[i+1])-1)
+        #assert integrand_1(tri[i])==1
+        #assert integrand_1(tri[i+1])==0
+        #assert integrand_2(tri[i])==0
+        #assert integrand_2(tri[i+1])==1
+
+    return A, F
+
 
 def discretize_1d_heat(N, tri, f):
     '''With backwards euler, so on step is (M+kA)u_new = u_old + kf
