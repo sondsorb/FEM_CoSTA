@@ -8,7 +8,7 @@ def quadrature1d(a, b, Nq, g):
         for the function g using Nq quadrature points.
         a - startpoint
         b - endpoint
-        Nq - number of quadrature points must be from the list [1, 2, 3, 4].
+        Nq - number of quadrature points must be from the list [1, 2, 3, 4, 5].
         g - function to integrate
     """
     x1=(b-a)/2

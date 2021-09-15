@@ -32,8 +32,17 @@ def test1():
             assert e < e_prev/2
     print('test1 passed (error -> 0 for increased p and Np, for dirichlet and neumann bdry cond)')
 
-
 def test_function(u_ex, f, p, Np=13, neumann=False):
+    model = FEM.Poisson(np.linspace(0,1,Np),f,p,u_ex)
+    if not neumann:
+        model.add_Dirichlet_bdry([0,-1])
+    else:
+        model.add_Dirichlet_bdry([0])
+        model.add_Neumann_bdry([-1], 1/4)
+    model.solve()
+    return model.relative_L2()
+
+def test_function_old(u_ex, f, p, Np=13, neumann=False):
     # Discretization:
     tri = np.linspace(0,1,Np)
     A, F = FEM.discretize_1d_poisson(Np, tri, f,p)
@@ -68,59 +77,61 @@ def test_function(u_ex, f, p, Np=13, neumann=False):
 def abdullah_bug_test():
     '''Taken from abdullahs preproject thesis chp 8, remember to credit'''
     '''Not implemented completely yet, only have linear elements so far'''#TODO
-    for exponent in range(1,6):
+    fig1, axs1 = plt.subplots(3,2)
+    fig2, axs2 = plt.subplots(3,2)
+    for exponent in range(1,7):
         def u_ex(x): return x**exponent
         def f(x): 
             if exponent <2:
                 return 0
             return exponent*(exponent-1)*x**(exponent-2)
 
-        Nes = [2,4,8,16,32,64]
-        ps = [1,2,3,4]
+        Nes = [2,4,8,16,32]#,64]#, 128, 256]
+        ps = [1,2,3,4,5]
         L2s= np.zeros((len(Nes), len(ps)))
         for i in range(len(Nes)):
             for j in range(len(ps)):
                 Ne=Nes[i]
                 p=ps[j]
+                Np = Ne*p+1
 
                 # Discretization:
-                Np = Ne*p+1
-                tri = np.linspace(0,1,Np)
-                A, F = FEM.discretize_1d_poisson(Np, tri, f, p)
+                model = FEM.Poisson(np.linspace(0,1,Np),f,p,u_ex)
+                model.add_Dirichlet_bdry()
+                model.solve ()
+                L2s[i,j] = model.relative_L2()
 
-                # Add Dirichlet (zero) bdry conds (consider doing this in another way)
-                ep=1e-10
-                A[0,0] = -1/ep
-                F[0] = 0
-                A[-1,-1] = -1/ep
-                F[-1] = 1/ep # this is =g/ep, g=1
+                ##tri_fine = np.linspace(0,1,(Np-1)*10+1)
+                ##u_fem_fnc = FEM.fnc_from_vct(tri,u_fem,p)
+                ##plt.plot(tri_fine, u_ex(tri_fine), label='u_ex')
+                ##plt.plot(tri_fine, u_fem_fnc(tri_fine), label='fem')
+                ##plt.legend()
+                ##plt.show()
 
-                u_fem = np.linalg.solve(-A, F) #Solve system
+        ##plt.loglog(Nes,L2s, label=ps)
+        ##plt.xlabel('Number of elements')
+        ##plt.grid()
+        ##plt.legend(title='p:')
+        ##plt.show()
+        m = (exponent-1)//2
+        n = (exponent-1)%2
+        axs1[m,n].loglog(Nes,L2s, label=ps)
+        axs1[m,n].set_xlabel('Number of elements')
+        axs1[m,n].grid()
+        axs1[m,n].legend(title='p:')
 
-                #tri_fine = np.linspace(0,1,(Np-1)*10+1)
-                #u_fem_fine = np.zeros(len(tri_fine))
-                #u_fem_fnc = FEM.fnc_from_vct(tri,u_fem,p)
-                #for k in range(len(tri_fine)):
-                #    u_fem_fine[k] = u_fem_fnc(tri_fine[k])
-                #plt.plot(tri_fine, u_ex(tri_fine), label='u_ex')
-                #plt.plot(tri_fine, u_fem_fine, label='fem')
-                #plt.legend()
-                #plt.show()
-
-                u_fem_fnc = FEM.fnc_from_vct(tri,u_fem,p)
-                L2s[i,j] = FEM.relative_L2(tri, u_ex, FEM.fnc_from_vct(tri,u_fem,p))
-        plt.loglog(Nes,L2s, label=ps)
-        plt.xlabel('Number of elements')
-        plt.grid()
-        plt.legend(title='p:')
-        plt.show()
-
-        plt.plot(ps,L2s.T, label=Nes)
-        plt.yscale('log')
-        plt.xlabel('Polynomial degree')
-        plt.grid()
-        plt.legend(title='Ne:')
-        plt.show()
+        ##plt.plot(ps,L2s.T, label=Nes)
+        ##plt.yscale('log')
+        ##plt.xlabel('Polynomial degree')
+        ##plt.grid()
+        ##plt.legend(title='Ne:')
+        ##plt.show()
+        axs2[m,n].plot(ps,L2s.T, label=Nes)
+        axs2[m,n].set_yscale('log')
+        axs2[m,n].set_xlabel('Polynomial degree')
+        axs2[m,n].grid()
+        axs2[m,n].legend(title='N:')
+    plt.show()
 
 
 def sindres_mfact_test(sol=0, alpha=0.5, p=4):
@@ -128,31 +139,23 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
     T=1
 
     if sol==0:
-        def f(t):
-            def ft(x):
-                return 0
-            return ft
+        def f(x,t):
+            return 0
         def u_ex(x,t=T): return alpha*(t+x*x/2)
     
     if sol==1:
-        def f(t):
-            def ft(x):
-                return 1-alpha
-            return ft
+        def f(x,t):
+            return 1-alpha
         def u_ex(x,t=T): return t+alpha*x*x/2
     
     if sol==2:
-        def f(t):
-            def ft(x):
-                return 0.5/(t+alpha+1)**0.5-120*x*x-60*x+40
-            return ft
+        def f(x,t):
+            return 0.5/(t+alpha+1)**0.5-120*x*x-60*x+40
         def u_ex(x,t=T): return (t+alpha+1)**0.5 + 10*x*x*(x-1)*(x+2)
 
     if sol==3:
-        def f(t):
-            def ft(x):
-                return alpha/(t+0.1)**2*(x*(1-x)+2*((x-1)*np.tanh(x/(t+0.1))-t-0.1))*np.cosh(x/(t+0.1))**-2
-            return ft
+        def f(x,t):
+            return alpha/(t+0.1)**2*(x*(1-x)+2*((x-1)*np.tanh(x/(t+0.1))-t-0.1))*np.cosh(x/(t+0.1))**-2
         def u_ex(x,t=T): return 2+alpha*(x-1)*np.tanh(x/(t+0.1))
 
     if sol==4:
@@ -161,23 +164,26 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
         sn=np.sin
         cs=np.cos
         a=alpha
-        def f(t):
-            def ft(x):
-                return 2*pi*(cs(2*pi*t+a)+2*pi*sn(2*pi*t+a))*cs(2*pi*x) 
-            return ft
+        def f(x,t):
+            return 2*pi*(cs(2*pi*t+a)+2*pi*sn(2*pi*t+a))*cs(2*pi*x) 
         def u_ex(x,t=T): return 1+sn(2*pi*t+a)*cs(2*pi*x)
 
 
     def u0(x): return u_ex(x,0)
     def g(t): return u_ex(0,t), u_ex(1,t)
 
+
     Ne=1
     time_steps=1
     L2s=[]
     dofs=[]
     for i in range(5):
-        u_fem = FEM.solve_heat(Ne,time_steps, u0, g, f, p, T)
+        ##u_fem = FEM.solve_heat(Ne,time_steps, u0, g, f, p, T)
         tri = np.linspace(0,1,Ne*p+1)
+        model = FEM.Heat(tri, f, p, u_ex)
+        model.solve(time_steps, T=T)
+        u_fem = model.u_fem
+        ########3 got this far in class-ifying
         tri_fine = np.linspace(0,1,10*Ne*p+1)
 
         u_fem_fnc = FEM.fnc_from_vct(tri,u_fem,p)
@@ -197,11 +203,11 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
-    test1()
     sindres_mfact_test(0,1)
     sindres_mfact_test(1,4)
     sindres_mfact_test(2,3)
     sindres_mfact_test(3,2)
     sindres_mfact_test(4,1)
-    abdullah_bug_test()
     quit()
+    abdullah_bug_test()
+    test1()

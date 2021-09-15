@@ -7,6 +7,7 @@ def length(x):
     try: 
         return len(x)
     except:
+        assert type(x) == type(1) or type(x) == type(1.0)
         return 0
 
 def zero(x): return 0
@@ -23,14 +24,15 @@ def L2(tri, f1, f2 = zero):
 
 class Fem_1d:
 
-    def __init__(tri, f, p):
+    def __init__(self, tri, f, p, u_ex=None):
         self.Np = len(tri) #Np number of grid nodes
         self.tri = tri #triangulation, form [a0,a1,a2,a3,...aNp]
         self.f = f # source function
         self.p = p # degree of test functions'''
-        assert (Np-1)%p==0
+        self.u_ex = u_ex # exact function if provided
+        assert (self.Np-1)%p==0
 
-    def single_point_solution(x): 
+    def single_point_solution(self, x): 
         tri=self.tri
         p=self.p
         vct = self.u_fem
@@ -51,20 +53,24 @@ class Fem_1d:
         print('Error: function evaluated outside domain')
         return 1/0
     
-    def solution(x):
+    def solution(self, x):
         if length(x)>0:
             return np.array([self.single_point_solution(x_i) for x_i in x])
         else:
-            return single_point_solution(x)
+            return self.single_point_solution(x)
     
-    
-    def relative_L2():
+    def relative_L2(self, ):
         return L2(self.tri,self.u_ex,self.solution)/L2(self.tri,self.u_ex)
 
-class Poisson(Fem_1d):
-    def __init__(tri, f, p=1):
-        super.init(tri,f,p)
+    def set_u_ex(self, u_ex):
+        self.u_ex = u_ex
+
     
+class Poisson(Fem_1d):
+    def __init__(self, tri, f, p=1, u_ex=None):
+        super().__init__(tri,f,p,u_ex)
+
+        Np=self.Np
         F = np.zeros((Np))
         A = np.zeros((Np,Np))
     
@@ -99,30 +105,49 @@ class Poisson(Fem_1d):
                         if j!=i:
                             phi *= (x-tri[k+j])/(tri[k+i]-tri[k+j])
                     return phi*f(x)
-                F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],4, integrand)
-            #print('a', integrand_1(tri[i])-1)
-            #print('b', integrand_1(tri[i+1])-0)
-            #print('c', integrand_2(tri[i])-0)
-            #print('d', integrand_2(tri[i+1])-1)
-            #assert integrand_1(tri[i])==1
-            #assert integrand_1(tri[i+1])==0
-            #assert integrand_2(tri[i])==0
-            #assert integrand_2(tri[i+1])==1
-    
+                F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],5, integrand)
         self.A=A
         self.F=F
 
-    def solve():
-        super.u_fem=np.linalg.solve(-A,F)
+    def add_Dirichlet_bdry(self, indices=[0,-1], g=None):
+        '''g is only needed if super does not have anu u_ex'''
+        assert g!=None or self.u_ex!=None
+        if length(indices)==0:
+            indices = [indices]
+            if g!=None:
+                assert length(indices) == length(g)
+                g = [g]
+        if self.u_ex != None:
+            g = [self.u_ex(self.tri[i]) for i in indices]
+        ep=1e-16
+        for i in range(len(indices)):
+            self.A[indices[i],indices[i]] = -1/ep
+            self.F[indices[i]] = g[i]/ep
+    
+    def add_Neumann_bdry(self, index,h):
+        self.F[index] -= h
 
-class heat(Fem_1d):
-    def __init__(tri, f, p=1):
+    def solve(self, ):
+        self.u_fem=np.linalg.solve(-self.A,self.F)
+
+
+class Heat(Fem_1d):
+    def __init__(self, tri, f, p=1, u_ex=None):
         '''With backwards euler, so on step is (M+kA)u_new = u_old + kf
 
         Np number of grid points
-        tri: triangulation, form [a0,a1,a2,a3,...aNp]'''
-        super.init(tri,f,p)
+        tri: triangulation, form [a0,a1,a2,a3,...aNp]
+        p: polynomial degree of test functoins
+        f: source, form f(x,t)
+        u_ex: exact solution. Form: u_ex(x,t=T) (important that T is default time, 
+                                    time is not provided when calculating L2)
+        '''
+        super().__init__(tri,f,p,u_ex)
     
+    def discretize(self):
+        Np = self.Np
+        tri= self.tri
+        p = self.p
         F = np.zeros((Np))
         A = np.zeros((Np,Np))
         M = np.zeros((Np,Np))
@@ -172,30 +197,51 @@ class heat(Fem_1d):
                     for j in range(p+1):
                         if j!=i:
                             phi *= (x-tri[k+j])/(tri[k+i]-tri[k+j])
-                    return phi*f(x)
-                F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],4, integrand)
+                    return phi*self.f(x=x, t=self.time)
+                F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],5, integrand)
 
-        self.M=M
-        self.A=A
-        self.F=F
+        return M,A,F
 
-    def solve(Ne, time_steps, u0, g, f, p, T=1):
+    def add_Dirichlet_bdry(self, indices=[0,-1], g=None):
+        '''g is only needed if super does not have anu u_ex'''
+        assert g!=None or self.u_ex!=None
+        if length(indices)==0:
+            indices = [indices]
+            if g!=None:
+                assert length(indices) == length(g)
+                g = [g]
+        if self.u_ex != None:
+            g = [self.u_ex(self.tri[i], t=self.time) for i in indices]
+        else:
+            g = [gt(t=self.time) for gt in g]
+        ep=1e-16
+        for i in range(len(indices)):
+            self.MA[indices[i],indices[i]] = self.k/ep
+            self.F[indices[i]] = g[i]/ep
+
+    def solve(self, time_steps, u0=None, g=None, T=1):
         '''find u at t=T using backward euler'''
         k = T/time_steps
-        tri = np.linspace(0,1,Ne*p+1)
+        self.k=k
     
-        u_prev = u0(tri)
+        if self.u_ex != None:
+            u_prev = self.u_ex(self.tri, t=0)
+        else:
+            u_prev = u0(self.tri)
         for time_step in range(1,time_steps+1):
-            M,A,F = discretize_1d_heat(tri,f(t=time_step*k),p)
-            MA = M+A*k
-            ep=1e-10
-            MA[0,0]=k/ep
-            MA[-1,-1]=k/ep
-            F[0] = g(t=time_step*k)[0]/ep
-            F[-1] = g(t=time_step*k)[1]/ep
-            u_fem = np.linalg.solve(MA, M@u_prev+F*k) #Solve system
+            self.time = k*time_step
+            M,A,F = self.discretize()
+            self.F = F
+            self.MA = M+A*k
+            self.add_Dirichlet_bdry(g=g)
+            ##ep=1e-10
+            ##MA[0,0]=k/ep
+            ##MA[-1,-1]=k/ep
+            ##F[0] = g(t=time_step*k)[0]/ep
+            ##F[-1] = g(t=time_step*k)[1]/ep
+            u_fem = np.linalg.solve(self.MA, M@u_prev+F*k) #Solve system
             u_prev = u_fem
-        return u_fem
+        self.u_fem = u_fem
 
 
 
@@ -243,7 +289,7 @@ def discretize_1d_poisson(Np, tri, f, p=1):
                     if j!=i:
                         phi *= (x-tri[k+j])/(tri[k+i]-tri[k+j])
                 return phi*f(x)
-            F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],4, integrand)
+            F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],5, integrand)
         #print('a', integrand_1(tri[i])-1)
         #print('b', integrand_1(tri[i+1])-0)
         #print('c', integrand_2(tri[i])-0)
