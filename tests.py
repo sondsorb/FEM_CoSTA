@@ -2,6 +2,7 @@
 
 import numpy as np
 import quadrature
+import functions
 import FEM
 from matplotlib import pyplot as plt
 
@@ -41,36 +42,6 @@ def test_function(u_ex, f, p, Np=13, neumann=False):
         model.add_Neumann_bdry([-1], 1/4)
     model.solve()
     return model.relative_L2()
-
-def test_function_old(u_ex, f, p, Np=13, neumann=False):
-    # Discretization:
-    tri = np.linspace(0,1,Np)
-    A, F = FEM.discretize_1d_poisson(Np, tri, f,p)
-    # Add Dirichlet (zero) bdry conds (consider doing this in another way)
-    if not neumann:
-        ep=1e-10
-        A[0,0] = 1/ep
-        A[-1,-1] = 1/ep
-        F[0] = 0
-        F[-1] = 0
-    if neumann:
-        # I hardcoded the neumann conditions for the fuction u=1/(1+x)-1+x/2
-        ep=1e-10
-        A[0,0] = 1/ep
-        F[0] = 0
-        h = 1/4 # outwards derivative of u at x=1
-        F[-1] -= h
-
-    # Solve system
-    u_fem = np.linalg.solve(-A, F)
-
-    #plt.plot(tri, u_fem, label='fem')
-    ##plt.plot(tri, u_ex(tri), label='u_ex')
-    #plt.plot(np.linspace(0,1,(Np-1)*10+1), u_ex(np.linspace(0,1,(Np-1)*10+1)), label='u_ex')
-    #plt.legend()
-    #plt.show()
-    tri_fine=np.linspace(0,1,(Np-1)*10+1)
-    return FEM.relative_L2(tri_fine, u_ex, FEM.fnc_from_vct(tri,u_fem,p))
 
 
 
@@ -137,38 +108,7 @@ def abdullah_bug_test():
 def sindres_mfact_test(sol=0, alpha=0.5, p=4):
     '''testing equations from sindres paper.'''
     T=1
-
-    if sol==0:
-        def f(x,t):
-            return 0
-        def u_ex(x,t=T): return alpha*(t+x*x/2)
-    
-    if sol==1:
-        def f(x,t):
-            return 1-alpha
-        def u_ex(x,t=T): return t+alpha*x*x/2
-    
-    if sol==2:
-        def f(x,t):
-            return 0.5/(t+alpha+1)**0.5-120*x*x-60*x+40
-        def u_ex(x,t=T): return (t+alpha+1)**0.5 + 10*x*x*(x-1)*(x+2)
-
-    if sol==3:
-        def f(x,t):
-            return alpha/(t+0.1)**2*(x*(1-x)+2*((x-1)*np.tanh(x/(t+0.1))-t-0.1))*np.cosh(x/(t+0.1))**-2
-        def u_ex(x,t=T): return 2+alpha*(x-1)*np.tanh(x/(t+0.1))
-
-    if sol==4:
-        # abrreviatiosn
-        pi=np.pi
-        sn=np.sin
-        cs=np.cos
-        a=alpha
-        def f(x,t):
-            return 2*pi*(cs(2*pi*t+a)+2*pi*sn(2*pi*t+a))*cs(2*pi*x) 
-        def u_ex(x,t=T): return 1+sn(2*pi*t+a)*cs(2*pi*x)
-
-
+    f,u_ex = functions.sbmfact(T,alpha)[sol]
     def u0(x): return u_ex(x,0)
     def g(t): return u_ex(0,t), u_ex(1,t)
 
@@ -178,21 +118,17 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
     L2s=[]
     dofs=[]
     for i in range(5):
-        ##u_fem = FEM.solve_heat(Ne,time_steps, u0, g, f, p, T)
         tri = np.linspace(0,1,Ne*p+1)
         model = FEM.Heat(tri, f, p, u_ex)
         model.solve(time_steps, T=T)
         u_fem = model.u_fem
-        ########3 got this far in class-ifying
         tri_fine = np.linspace(0,1,10*Ne*p+1)
 
-        u_fem_fnc = FEM.fnc_from_vct(tri,u_fem,p)
-        
-        plt.plot(tri_fine,u_fem_fnc(tri_fine), label=f'Ne,ts={Ne},{time_steps}')
+        plt.plot(tri_fine,model.solution(tri_fine), label=f'Ne,ts={Ne},{time_steps}')
         dofs.append((Ne*p-1)*time_steps)
         Ne*=2
         time_steps*=2
-        L2s.append(FEM.relative_L2(tri, u_ex, FEM.fnc_from_vct(tri,u_fem)))
+        L2s.append(model.relative_L2())
     plt.plot(tri_fine, u_ex(tri_fine), label='u_ex')
     plt.legend(title=f'sol {sol}')
     plt.show()
@@ -203,11 +139,12 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
+    test1()
+    abdullah_bug_test()
     sindres_mfact_test(0,1)
     sindres_mfact_test(1,4)
     sindres_mfact_test(2,3)
     sindres_mfact_test(3,2)
     sindres_mfact_test(4,1)
+    sindres_mfact_test(4,2)
     quit()
-    abdullah_bug_test()
-    test1()
