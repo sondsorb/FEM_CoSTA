@@ -133,7 +133,7 @@ class Poisson(Fem_1d):
 
 
 class Heat(Fem_1d):
-    def __init__(self, tri, f, p=1, u_ex=None):
+    def __init__(self, tri, f, p=1, u_ex=None, k=None):
         '''With backwards euler, so on step is (M+kA)u_new = u_old + kf
 
         Np number of grid points
@@ -142,10 +142,13 @@ class Heat(Fem_1d):
         f: source, form f(x,t)
         u_ex: exact solution. Form: u_ex(x,t=T) (important that T is default time, 
                                     time is not provided when calculating L2)
+        k: time step lenght. Only needs to be given when usin step() and not solve()
         '''
         super().__init__(tri,f,p,u_ex)
+        self.time=0
+        self.k = k
     
-    def discretize(self):
+    def __discretize(self):
         Np = self.Np
         tri= self.tri
         p = self.p
@@ -203,15 +206,15 @@ class Heat(Fem_1d):
 
         return M,A,F
 
-    def add_Dirichlet_bdry(self, indices=[0,-1], g=None):
-        '''g is only needed if super does not have anu u_ex'''
+    def __add_Dirichlet_bdry(self, indices=[0,-1], g=None):
+        '''g can be used instead of u_ex, either when u_ex is unknown or for testing with some other g'''
         assert g!=None or self.u_ex!=None
         if length(indices)==0:
             indices = [indices]
             if g!=None:
                 assert length(indices) == length(g)
                 g = [g]
-        if self.u_ex != None:
+        if g == None:
             g = [self.u_ex(self.tri[i], t=self.time) for i in indices]
         else:
             g = [gt(t=self.time) for gt in g]
@@ -220,26 +223,26 @@ class Heat(Fem_1d):
             self.MA[indices[i],indices[i]] = self.k/ep
             self.F[indices[i]] = g[i]/ep
 
+    def step(self, g=None):
+        '''Do one step of the backward euler scheme'''
+        u_prev = self.u_fem
+        self.time += self.k
+        M,A,F = self.__discretize()
+        self.F = F
+        self.MA = M+A*self.k
+        self.__add_Dirichlet_bdry(g=g)
+        self.u_fem = np.linalg.solve(self.MA, M@u_prev+F*self.k) #Solve system
+
+
     def solve(self, time_steps, u0=None, g=None, T=1):
         '''find u at t=T using backward euler'''
+        assert self.time == 0 # this is only supposed to run on unsolved systems
         k = T/time_steps
         self.k=k
     
-        if self.u_ex != None:
-            u_prev = self.u_ex(self.tri, t=0)
+        if u0 != None:
+            self.u_fem = u0(self.tri)
         else:
-            u_prev = u0(self.tri)
-        for time_step in range(1,time_steps+1):
-            self.time = k*time_step
-            M,A,F = self.discretize()
-            self.F = F
-            self.MA = M+A*k
-            self.add_Dirichlet_bdry(g=g)
-            ##ep=1e-10
-            ##MA[0,0]=k/ep
-            ##MA[-1,-1]=k/ep
-            ##F[0] = g(t=time_step*k)[0]/ep
-            ##F[-1] = g(t=time_step*k)[1]/ep
-            u_fem = np.linalg.solve(self.MA, M@u_prev+F*k) #Solve system
-            u_prev = u_fem
-        self.u_fem = u_fem
+            self.u_fem = self.u_ex(self.tri, t=0)
+        for t in range(time_steps):
+            self.step(g)
