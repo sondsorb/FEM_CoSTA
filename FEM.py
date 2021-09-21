@@ -10,7 +10,7 @@ def length(x):
         assert type(x) in [int, float, np.int64, np.float64]
         return 0
 
-def zero(x): return 0
+def zero(x, t=0): return 0
 
 def L2(tri, f1, f2 = zero):
     '''returns L2 of f1-f2, (just f1 if f2 is empty)'''
