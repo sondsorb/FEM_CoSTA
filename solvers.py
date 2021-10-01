@@ -12,28 +12,33 @@ import functions
 
 
 
-class Costa:
+class Solvers:
 
-    def __init__(self, sol=2, Ne=10, time_steps=20, p=1, T=1, **NNkwargs):
+    def __init__(self, sol=3, unknown_source=True, Ne=10, time_steps=20, p=1, T=1, NoM=2, **NNkwargs):
         self.sol = sol # index of manufactured SOLution
         self.Ne = Ne
         self.p = p
         self.T = T
+        self.NoM = NoM # Number og (neural network) models (NoM hamNNs + NoM pNNs)
         self.Np = Ne*p+1
         self.tri = np.linspace(0,1,self.Np)
         #print(self.tri)
         self.time_steps = time_steps
         self.alpha_train = [.1,.2,.3,.4,.5,.6,.9,1,1.2,1.3,1.4,1.6,1.7,1.8,1.9,2]
-        self.alpha_val = [.8,1.1, 1,8, 0.4]
+        self.alpha_val = [.8,1.1]#, 1,8, 0.4]
         self.alpha_test = [.7,1.5] # Interpolation for now
         self.plot = True
-        self.unknown_source = True
+        self.unknown_source = unknown_source
 
-        self.set_NN_model(**NNkwargs)
+        self.hamNNs= []
+        self.pureNNs=[]
+        for i in range(NoM):
+            self.hamNNs.append(self.set_NN_model(**NNkwargs))#,init=0.05))
+            self.pureNNs.append(self.set_NN_model(**NNkwargs,init=False))
 
-    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=20, lr=1e-5):
+    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=20, lr=1e-5, init=False):
         self.normalize =True#False
-        self.alpha_feature = True
+        self.alpha_feature = 0#True
         self.nfeats = 0#1 # number of extra features (like alpha, time,)
         if self.alpha_feature:
             self.nfeats +=1
@@ -67,87 +72,159 @@ class Costa:
             ]*(l-2) + [
                 layers.Dense(
                     self.Np-2,
-                    kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05),
+                    kernel_initializer=tf.keras.initializers.RandomUniform(minval=-init, maxval=init) if init else None,
                     #kernel_initializer='zeros',
-                    bias_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05),
+                    bias_initializer=tf.keras.initializers.RandomUniform(minval=-init, maxval=init) if init else None,
                     #bias_initializer='zeros',
                     ),
             ]
         )
         opt = keras.optimizers.Adam(learning_rate=lr)
         model1.compile(loss='mse', optimizer=opt)
-        self.NN_model = model1 # move this out (remember it relies on self.Np)
+        return model1# move this out (remember it relies on self.Np)
 
         
 
 
     def __data_set(self,alphas, set_norm_params=False):
-        data=np.zeros((self.time_steps*len(alphas),self.Np+self.nfeats + self.Np))
+        ham_data=np.zeros((self.time_steps*len(alphas),self.Np+self.nfeats + self.Np)) # data for ham NN model
+        pnn_data=np.zeros((self.time_steps*len(alphas),self.Np+self.nfeats + self.Np)) # data for pure NN model
         for i, alpha in enumerate(alphas):
+            print(f'--- making data set for alpha {alpha} ---')
             f, u_ex = functions.sbmfact(alpha=alpha)[self.sol]
             if self.unknown_source:
                 f=FEM.zero
             fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
             for t in range(self.time_steps):
-                fem_model.u_fem = fem_model.u_ex(fem_model.tri, t=fem_model.time) # Use u_ex as u_prev
+                ex_step = fem_model.u_ex(fem_model.tri, t=fem_model.time) # exact solution before step
+                pnn_data[i*self.time_steps+t,:self.Np] = ex_step
+                fem_model.u_fem = ex_step # Use u_ex as u_prev
                 fem_model.step() # make a step
-                data[i*self.time_steps+t,:self.Np] = fem_model.u_fem
+                ham_data[i*self.time_steps+t,:self.Np] = fem_model.u_fem
                 if self.alpha_feature:
-                    data[i*self.time_steps+t,self.Np:self.Np+self.nfeats] = alpha # more/less features could be tried
-                error = fem_model.u_ex(fem_model.tri, t=fem_model.time) - fem_model.u_fem
-                data[i*self.time_steps+t, self.Np+self.nfeats:] = fem_model.MA @ error # residual
-        np.random.shuffle(data)
-        X = data[:,:self.Np+self.nfeats]
-        Y = data[:,self.Np+self.nfeats+1:-1]
+                    ham_data[i*self.time_steps+t,self.Np:self.Np+self.nfeats] = alpha # more/less features could be tried
+                    pnn_data[i*self.time_steps+t,self.Np:self.Np+self.nfeats] = alpha # more/less features could be tried
+                ex_step = fem_model.u_ex(fem_model.tri, t=fem_model.time) # exact solution after step
+                error = ex_step - fem_model.u_fem
+                pnn_data[i*self.time_steps+t, self.Np+self.nfeats:] = ex_step
+                ham_data[i*self.time_steps+t, self.Np+self.nfeats:] = fem_model.MA @ error # residual
+                #if t%100==4:
+                #    print('err and res')
+                #    print(error)
+                #    #print(fem_model.MA)
+                #    print(ham_data[i*self.time_steps+t, self.Np+self.nfeats:])
+                #    print(fem_model.F)
+                #    print(fem_model.k)
+                #    print(fem_model.T)
+        np.random.shuffle(ham_data)
+        np.random.shuffle(pnn_data)
+        X = ham_data[:,:self.Np+self.nfeats]
+        Y = ham_data[:,self.Np+self.nfeats+1:-1]
+        pnnX = pnn_data[:,:self.Np+self.nfeats]
+        pnnY = pnn_data[:,self.Np+self.nfeats+1:-1]
         #print(X)
         if set_norm_params: # only training set, not val
-            self.mean = np.mean(X) if self.normalize else 0
-            self.var = np.var(X) if self.normalize else 1
-            print('mean, var = ',self.mean, self.var)
-        X = X-self.mean
-        X = X/self.var**0.5
+            self.ham_mean = np.mean(X) if self.normalize else 0
+            self.ham_var = np.var(X) if self.normalize else 1
+            self.pnn_mean = np.mean(pnnX) if self.normalize else 0
+            self.pnn_var = np.var(pnnX) if self.normalize else 1
+            #print('mean, var = ',self.mean, self.var)
+        X = X-self.ham_mean
+        X = X/self.ham_var**0.5
+        pnnX = pnnX-self.pnn_mean
+        pnnX = pnnX/self.pnn_var**0.5
         #print(X)
-        return X,Y
+        return X,Y, pnnX, pnnY
 
 
 
     def train(self):
 
         start_time = datetime.datetime.now()
-        X, Y = self.__data_set(self.alpha_train, set_norm_params=True)
-        X_val, Y_val = self.__data_set(self.alpha_val)
+        X, Y, pnnX, pnnY = self.__data_set(self.alpha_train, set_norm_params=True)
+        X_val, Y_val, pnnX_val, pnnY_val = self.__data_set(self.alpha_val)
         print(f'\nTime making data set: {datetime.datetime.now()-start_time}')
 
         start_time = datetime.datetime.now()
-        train_result = self.NN_model.fit(X, Y, 
-                epochs=self.epochs,
-                batch_size=32, 
-                callbacks=[keras.callbacks.EarlyStopping(patience=self.patience)],
-                validation_data=(X_val, Y_val),
-                verbose=0
-                )
-        self.history = train_result.history
-        print(f'\nTime training: {datetime.datetime.now()-start_time}')
+        train_kwargs = {
+                #'epochs':self.epochs, 
+                'batch_size':32, 
+                #'callbacks': [keras.callbacks.EarlyStopping(patience=self.patience)], 
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+        ham_train_hists = []
+        ham_val_hists = []
+        for model in self.hamNNs:
+            # train for minimum 100 steps
+            train_result = model.fit(X, Y, epochs=100-self.patience, **train_kwargs)
+            train_hist = train_result.history['loss']
+            val_hist = train_result.history['val_loss']
+            # train with patience 20
+            train_result = model.fit(X, Y, 
+                    epochs=self.epochs, 
+                    callbacks = [keras.callbacks.EarlyStopping(patience=self.patience)], 
+                    **train_kwargs)
+            train_hist.extend(train_result.history['loss'])
+            val_hist.extend(train_result.history['val_loss'])
+            ham_train_hists.append(train_hist)
+            ham_val_hists.append(val_hist)
+        print(f'\nTime training ham NNs: {datetime.datetime.now()-start_time}')
+
+        # pure NN:
+        train_kwargs['validation_data'] = (pnnX_val, pnnY_val)
+        pnn_train_hists = []
+        pnn_val_hists = []
+        for model in self.pureNNs:
+            # train for minimum 100 steps
+            train_result = model.fit(pnnX, pnnY, epochs=100-self.patience, **train_kwargs)
+            train_hist = train_result.history['loss']
+            val_hist = train_result.history['val_loss']
+            # train with patience 20
+            train_result = model.fit(pnnX, pnnY, 
+                    epochs=self.epochs, 
+                    callbacks = [keras.callbacks.EarlyStopping(patience=self.patience)], 
+                    **train_kwargs)
+            train_hist.extend(train_result.history['loss'])
+            val_hist.extend(train_result.history['val_loss'])
+            pnn_train_hists.append(train_hist)
+            pnn_val_hists.append(val_hist)
+        print(f'\nTime training all NNs: {datetime.datetime.now()-start_time}')
+
         if self.plot:
-            epochs_vector = np.arange(1, len(self.history['loss'])+1)
-            plt.plot(epochs_vector, self.history['loss'], '--', label='loss')
-            plt.plot(epochs_vector, self.history['val_loss'], label='val_loss')
-        if self.plot:
+            for hist in ham_train_hists:
+                epochs_vector = np.arange(1, len(hist)+1)
+                plt.plot(epochs_vector, hist, 'b--', label='train_losses')
+            for hist in ham_val_hists:
+                epochs_vector = np.arange(1, len(hist)+1)
+                plt.plot(epochs_vector, hist, 'r', label='val_losses')
             #plt.ylim(0, self.history['loss'][4])
             plt.yscale('log')
             plt.xlabel('Number of epochs')
             plt.ylabel('Loss (MSE)')
-            plt.legend()
+            plt.legend(title='hamNN')
+            plt.grid()
+            plt.show()
+            for hist in pnn_train_hists:
+                epochs_vector = np.arange(1, len(hist)+1)
+                plt.plot(epochs_vector, hist, 'b--', label='train_losses')
+            for hist in pnn_val_hists:
+                epochs_vector = np.arange(1, len(hist)+1)
+                plt.plot(epochs_vector, hist, 'r', label='val_losses')
+            #plt.ylim(0, self.history['loss'][4])
+            plt.yscale('log')
+            plt.xlabel('Number of epochs')
+            plt.ylabel('Loss (MSE)')
+            plt.legend(title='pureNN')
             plt.grid()
             plt.show()
 
 
-    def __call__(self, alpha=None):
+    def __call__(self, alpha=None, model_index=0):
+        NN = self.hamNNs[model_index]
         if alpha == None:
             alpha = self.alpha_test[0]
         X=np.zeros((1,self.Np+self.nfeats))
-        if self.alpha_feature:
-            X[:,-1] = alpha
         f, u_ex = functions.sbmfact(alpha=alpha)[self.sol]
         if self.unknown_source:
             f=FEM.zero
@@ -158,16 +235,49 @@ class Costa:
             fem_model.step() # first, uncorrected, step
             fem_step = fem_model.u_fem
             X[:,:self.Np] = fem_step
-            #X = (X-self.mean)/self.var**0.5
-            #print(X)
-            #print((X-self.mean)/self.var**0.5)
-            correction = self.NN_model(X)[0,:].numpy() #* 0.5#.01
-            #print('\ncorrecton:\n', correction)
-            u_prev[1:-1] = u_prev[1:-1] + correction # add correction to previous solution
+            if self.alpha_feature:
+                X[:,-1] = alpha
+            X = (X-self.ham_mean)/self.ham_var**0.5
+            correction = np.zeros(self.Np)
+            correction[1:-1] = NN(X)[0,:]
+            #correction = NN(X)[0,:].numpy()
+            #u_prev[1:-1] = u_prev[1:-1] + correction # add correction to previous solution
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
-            fem_model.step() # corrected step
+            fem_model.step(correction=correction) # corrected step
         return fem_model.u_fem
+
+    def call_PNN(self, alpha=None, model_index=0):
+        NN = self.pureNNs[model_index]
+        if alpha == None:
+            alpha = self.alpha_test[0]
+        X=np.zeros((1,self.Np+self.nfeats))
+        f, u_ex = functions.sbmfact(alpha=alpha)[self.sol]
+        u_NN = u_ex(self.tri, t=0)[1:-1]
+        k=self.T/self.time_steps
+        for t in range(self.time_steps):
+            u_prev = u_NN # save previous solution
+            X[:,1:self.Np-1] = u_prev
+            X[:,0]=u_ex(x=0,t=t*k)
+            X[:,self.Np-1]=u_ex(x=1,t=t*k)
+            if self.alpha_feature:
+                X[:,-1] = alpha
+            #if t%100==0:
+            #    plt.plot(self.tri, X[0,:self.Np], label='prev')
+            #if t%100==1:
+            #    print(f'time is {t*k}')
+            #    plt.plot(self.tri, X[0,:self.Np], label='new')
+            #    plt.plot(self.tri, u_ex(x=self.tri, t=t*k), label='ex')
+            #    plt.grid()
+            #    plt.legend()
+            #    plt.show()
+            X = (X-self.pnn_mean)/self.pnn_var**0.5
+            u_NN = NN(X)
+        result = np.zeros((self.Np))
+        result[1:self.Np-1] = u_NN
+        result[0] = u_ex(x=0,t=self.T)
+        result[self.Np-1] = u_ex(x=1,t=self.T)
+        return result
 
 
     def test(self, use_validation_set = True):
@@ -177,35 +287,52 @@ class Costa:
         fem_score_tri = {}
         costa_score = {}
         costa_score_tri = {}
+        pnn_score = {}
+        pnn_score_tri = {}
         if self.plot:
             fig, axs = plt.subplots(1,len(alphas))
         for i, alpha in enumerate(alphas):
             f, u_ex = functions.sbmfact(T=self.T,alpha=alpha)[self.sol]
             if self.unknown_source:
                 f=FEM.zero
+            
+            # Solve with FEM
             fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
             fem_model.solve(self.time_steps, T = self.T)
             if self.plot:
                 tri_fine = np.linspace(0,1,self.Ne*self.p*8+1)
-                axs[i].plot(tri_fine, fem_model.solution(tri_fine), label='fem')
-
+                axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'b', label='fem')
+                axs[i].plot(tri_fine, u_ex(tri_fine), 'k--', label='exact')
             fem_score[f'{alpha}'] = fem_model.relative_L2()
             fem_score_tri[f'{alpha}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
-            fem_model.u_fem =self(alpha)
+
+            # Solve with HAM
+            for m in range(self.NoM):
+                fem_model.u_fem =self(alpha, model_index=m) # store in fem_model for easy use of relative_L2 and soltion functoins
+                if self.plot:
+                    axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'g', label='costa')
+                costa_score[f'{alpha},{m}'] = fem_model.relative_L2()
+                costa_score_tri[f'{alpha},{m}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
+
+            # Solve with DNN
+            for m in range(self.NoM):
+                fem_model.u_fem =self.call_PNN(alpha, model_index=m) # store in fem_model for easy use of relative_L2 and soltion functoins
+                if self.plot:
+                    axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'y', label='pureNN')
+                pnn_score[f'{alpha},{m}'] = fem_model.relative_L2()
+                pnn_score_tri[f'{alpha},{m}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
             if self.plot:
-                axs[i].plot(tri_fine, fem_model.solution(tri_fine), label='costa')
-                axs[i].plot(tri_fine, u_ex(tri_fine), '--', label='exact')
                 axs[i].grid()
-                axs[i].legend(title=f'alpha={alpha}')
-            costa_score[f'{alpha}'] = fem_model.relative_L2()
-            costa_score_tri[f'{alpha}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
+                axs[i].legend(title=f'sol={self.sol},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
         print('')
         print('FEM L2 errors:', fem_score)
         print('CoSTA L2 errors:', costa_score)
+        print('PureNN L2 errors:', pnn_score)
         print('FEM l2 errors:', fem_score_tri)
         print('CoSTA l2 errors:', costa_score_tri)
+        print('PureNN l2 errors:', pnn_score_tri)
         print('')
         if self.plot:
             plt.show()
-        return fem_score, costa_score
+        return fem_score_tri, costa_score_tri, pnn_score_tri

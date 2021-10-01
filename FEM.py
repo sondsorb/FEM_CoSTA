@@ -18,8 +18,9 @@ def L2(tri, f1, f2 = zero):
     l=0
     def integrand(x): return (f1(x)-f2(x))**2
     for i in range(len(tri)-1):
-        l+= quadrature.quadrature1d(tri[i],tri[i]/2+tri[i+1]/2,5,integrand)
-        l+= quadrature.quadrature1d(tri[i]/2+tri[i+1]/2,tri[i+1],5,integrand)
+        l+= quadrature.quadrature1d(tri[i],tri[i+1],5,integrand)
+        #l+= quadrature.quadrature1d(tri[i],tri[i]/2+tri[i+1]/2,5,integrand)
+        #l+= quadrature.quadrature1d(tri[i]/2+tri[i+1]/2,tri[i+1],5,integrand)
     return l**0.5
 
 
@@ -223,7 +224,7 @@ class Heat(Fem_1d):
             self.MA[indices[i],indices[i]] = self.k/ep
             self.F[indices[i]] = g[i]/ep
 
-    def step(self, g=None):
+    def step(self, g=None, correction = 0):
         '''Do one step of the backward euler scheme'''
         u_prev = self.u_fem
         self.time += self.k
@@ -231,7 +232,7 @@ class Heat(Fem_1d):
         self.F = F
         self.MA = M+A*self.k
         self.__add_Dirichlet_bdry(g=g)
-        self.u_fem = np.linalg.solve(self.MA, M@u_prev+F*self.k) #Solve system
+        self.u_fem = np.linalg.solve(self.MA, M@u_prev+F*self.k+correction) #Solve system
 
 
     def solve(self, time_steps, u0=None, g=None, T=1):
