@@ -24,10 +24,10 @@ class Solvers:
         self.tri = np.linspace(0,1,self.Np)
         #print(self.tri)
         self.time_steps = time_steps
-        self.alpha_train = [1,1]#[.1,.2,.3,.4,.5,.6,.9,1,1.2,1.3,1.4,1.6,1.7,1.8,1.9,2]
-        self.alpha_val = [1,1]#[.8,1.1]#, 1,8, 0.4]
-        self.alpha_test_interpol = [1,1]#[.7,1.5]
-        self.alpha_test_extrapol = [1,1]#[-0.5,2.5]
+        self.alpha_train = [.1,.2,.3,.4,.5,.6,.9,1,1.2,1.3,1.4,1.6,1.7,1.8,1.9,2]
+        self.alpha_val = [.8,1.1]#, 1,8, 0.4]
+        self.alpha_test_interpol = [.7,1.5]
+        self.alpha_test_extrapol = [-0.5,2.5]
         self.plot = True
         self.unknown_source = unknown_source
 
@@ -37,7 +37,7 @@ class Solvers:
             self.hamNNs.append(self.set_NN_model(**NNkwargs))#,init=0.05))
             self.pureNNs.append(self.set_NN_model(**NNkwargs,init=False))
 
-    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=[20,50], min_epochs=[250,500], lr=1e-5, init=False):
+    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=[50,50], min_epochs=[250,500], lr=1e-5, noice_level=0, init=False):
         self.normalize =0#True#False
         self.alpha_feature = 0#True
         self.nfeats = 0#1 # number of extra features (like alpha, time,)
@@ -46,6 +46,7 @@ class Solvers:
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
+        self.noice_level = 1e-2#noice_level
         if model != None:
             self.model=model
             return
@@ -140,6 +141,8 @@ class Solvers:
         pnnX = pnnX-self.pnn_mean
         pnnX = pnnX/self.pnn_var**0.5
         #print(X)
+        X[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noice_level-self.noice_level/2
+        pnnX[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noice_level-self.noice_level/2
         return X,Y, pnnX, pnnY
 
 

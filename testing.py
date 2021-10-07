@@ -66,10 +66,10 @@ pnnscores = []
 for sol in range(1,5):
     print(f'sol: {sol}\n')
     model = solvers.Solvers(p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, NoM=NoM, **NNkwargs)
-    extra_tag = ''#_long_training'#'' # for different names when testing specific stuff
+    extra_tag = 'noice'#_long_training'#'' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
-    figname = ''
-    #model.plot=False
+    #figname = ''
+    model.plot=False
     model.train(figname=figname)
     #model.plot=True
     #fs, cs = model.test()
@@ -77,10 +77,10 @@ for sol in range(1,5):
     #costascores.append([cs[k] for k in cs])
     #model.plot=True
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
-    figname = ''
+    #figname = ''
     _ = model.test(interpol = True, figname=figname)
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/extrapol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
-    figname = ''
+    #figname = ''
     _ = model.test(interpol = False, figname=figname)
 #    fs, cs, ps = model.test(False, figname)
 #    femscores.append([fs[k] for k in fs])
