@@ -23,21 +23,21 @@ else:
 
 def set_args(mode=mode):
     print(f'\nTesting with mode "{mode}"...')
-    global Ne, time_steps, NNkwargs
+    global Ne, time_steps, NNkwargs, NoM
     if mode == 'bugfix':
         Ne = 5
         time_steps = 20
-        NNkwargs = {'l':4,'n':20,'lr':5e-3,'patience':10}
+        NNkwargs = {'l':4,'n':20,'lr':5e-3,'patience':[10,20]}
         NoM = 2
     elif mode == 'quick_test':
         Ne = 20
         time_steps = 500
-        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':20}
+        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,100]}
         NoM=3
     elif mode == 'full_test':
         Ne = 20
         time_steps = 5000
-        NNkwargs = {'l':6,'n':80, 'lr':1e-5, 'patience':20}
+        NNkwargs = {'l':6,'n':80, 'lr':1e-5, 'patience':[20,100]}
         NoM=4
 
 set_args()
@@ -54,22 +54,38 @@ else:
     source = True
 print('Using exact source' if source else 'Using unknown source (i.e. guessing zero)')
 
+if len(sys.argv)>3:
+    p = int(sys.argv[3])
+else:
+    p=1
+print(f'Using p={p}')
+
 femscores = []
 costascores = []
 pnnscores = []
 for sol in range(1,5):
     print(f'sol: {sol}\n')
-    model = solvers.Solvers(p=1,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, NoM=NoM, **NNkwargs)
+    model = solvers.Solvers(p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, NoM=NoM, **NNkwargs)
+    extra_tag = ''#_long_training'#'' # for different names when testing specific stuff
+    figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
+    figname = ''
     #model.plot=False
-    model.train()
-    model.plot=True
+    model.train(figname=figname)
+    #model.plot=True
     #fs, cs = model.test()
     #femscores.append([fs[k] for k in fs])
     #costascores.append([cs[k] for k in cs])
-    fs, cs, ps = model.test(False)
-    femscores.append([fs[k] for k in fs])
-    costascores.append([cs[k] for k in cs])
-    pnnscores.append([ps[k] for k in cs])
+    #model.plot=True
+    figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
+    figname = ''
+    _ = model.test(interpol = True, figname=figname)
+    figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/extrapol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
+    figname = ''
+    _ = model.test(interpol = False, figname=figname)
+#    fs, cs, ps = model.test(False, figname)
+#    femscores.append([fs[k] for k in fs])
+#    costascores.append([cs[k] for k in cs])
+#    pnnscores.append([ps[k] for k in cs])
 #femscores = np.array(femscores)
 #costascores = np.array(costascores)
 #pnnscores = np.array(costascores)
