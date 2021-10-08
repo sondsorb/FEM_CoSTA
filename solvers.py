@@ -37,7 +37,7 @@ class Solvers:
             self.hamNNs.append(self.set_NN_model(**NNkwargs))#,init=0.05))
             self.pureNNs.append(self.set_NN_model(**NNkwargs,init=False))
 
-    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=[50,50], min_epochs=[250,500], lr=1e-5, noice_level=0, init=False):
+    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=[50,50], min_epochs=[250,500], lr=1e-5, noise_level=0, init=False):
         self.normalize =0#True#False
         self.alpha_feature = 0#True
         self.nfeats = 0#1 # number of extra features (like alpha, time,)
@@ -46,7 +46,7 @@ class Solvers:
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
-        self.noice_level = 1e-2#noice_level
+        self.noise_level = 1e-2#noise_level
         if model != None:
             self.model=model
             return
@@ -141,8 +141,8 @@ class Solvers:
         pnnX = pnnX-self.pnn_mean
         pnnX = pnnX/self.pnn_var**0.5
         #print(X)
-        X[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noice_level-self.noice_level/2
-        pnnX[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noice_level-self.noice_level/2
+        X[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noise_level-self.noise_level/2
+        pnnX[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noise_level-self.noise_level/2
         return X,Y, pnnX, pnnY
 
 

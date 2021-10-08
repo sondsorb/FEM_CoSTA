@@ -66,7 +66,7 @@ pnnscores = []
 for sol in range(1,5):
     print(f'sol: {sol}\n')
     model = solvers.Solvers(p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, NoM=NoM, **NNkwargs)
-    extra_tag = 'noice'#_long_training'#'' # for different names when testing specific stuff
+    extra_tag = 'noise'#_long_training'#'' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     #figname = ''
     model.plot=False

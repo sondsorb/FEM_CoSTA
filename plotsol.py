@@ -2,7 +2,7 @@ import functions
 import numpy as np
 from matplotlib import pyplot as plt
 
-sol = 2
+sol = 4
 alpha = 1
 
 f, u = functions.sbmfact(5,alpha)[sol]
