@@ -152,6 +152,11 @@ class Solvers:
         start_time = datetime.datetime.now()
         X, Y, pnnX, pnnY = self.__data_set(self.alpha_train, set_norm_params=True)
         X_val, Y_val, pnnX_val, pnnY_val = self.__data_set(self.alpha_val)
+
+        plot_one_step_sources = False
+        if plot_one_step_sources:
+            X_test, Y_test, pnnX_test, pnnY_test = self.__data_set(self.alpha_val) # for plotting learnt source term only !
+
         print(f'\nTime making data set: {datetime.datetime.now()-start_time}')
 
         start_time = datetime.datetime.now()
@@ -229,6 +234,58 @@ class Solvers:
             plt.show()
         else:
             plt.close()
+        if plot_one_step_sources:
+            # Plot some source terms
+            for t in range(3):
+                plt.plot(self.tri[1:-1], Y[t], 'k',  label='exact source')
+                for model in self.hamNNs:
+                    plt.plot(self.tri[1:-1], model(np.array([X[t]]))[0], 'r',  label='ham source')
+                plt.legend(title='trainset')
+                plt.grid()
+                plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_train_{t}.pdf')
+                plt.show()
+    
+                plt.plot(self.tri[1:-1], Y_val[t], 'k',  label='exact source')
+                for model in self.hamNNs:
+                    plt.plot(self.tri[1:-1], model(np.array([X_val[t]]))[0], 'r',  label='ham source')
+                plt.legend(title='valset')
+                plt.grid()
+                plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_val_{t}.pdf')
+                plt.show()
+    
+                plt.plot(self.tri[1:-1], Y_test[t], 'k',  label='exact source')
+                for model in self.hamNNs:
+                    plt.plot(self.tri[1:-1], model(np.array([X_test[t]]))[0], 'r',  label='ham source')
+                plt.legend(title='testset')
+                plt.grid()
+                plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_test_{t}.pdf')
+                plt.show()
+    
+                # PNN 
+                plt.plot(self.tri[1:-1], pnnY[t], 'k',  label='exact temp')
+                for model in self.pureNNs:
+                    plt.plot(self.tri[1:-1], model(np.array([pnnX[t]]))[0], 'r',  label='pnn temp')
+                plt.legend(title='trainset')
+                plt.grid()
+                plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_train_{t}.pdf')
+                plt.show()
+    
+                plt.plot(self.tri[1:-1], pnnY_val[t], 'k',  label='exact temp')
+                for model in self.pureNNs:
+                    plt.plot(self.tri[1:-1], model(np.array([pnnX_val[t]]))[0], 'r',  label='pnn temp')
+                plt.legend(title='valset')
+                plt.grid()
+                plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_val_{t}.pdf')
+                plt.show()
+    
+                plt.plot(self.tri[1:-1], pnnY_test[t], 'k',  label='exact temp')
+                for model in self.pureNNs:
+                    plt.plot(self.tri[1:-1], model(np.array([pnnX_test[t]]))[0], 'r',  label='pnn temp')
+                plt.legend(title='testset')
+                plt.grid()
+                plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_test_{t}.pdf')
+                plt.show()
+
 
 
     def __call__(self, alpha=None, model_index=0):

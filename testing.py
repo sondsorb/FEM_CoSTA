@@ -31,8 +31,8 @@ def set_args(mode=mode):
         NoM = 2
     elif mode == 'quick_test':
         Ne = 20
-        time_steps = 500
-        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,100]}
+        time_steps = 200
+        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,50]}
         NoM=3
     elif mode == 'full_test':
         Ne = 20
@@ -69,8 +69,9 @@ for sol in range(1,5):
     extra_tag = 'noise'#_long_training'#'' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     #figname = ''
-    model.plot=False
+    #model.plot=False
     model.train(figname=figname)
+
     #model.plot=True
     #fs, cs = model.test()
     #femscores.append([fs[k] for k in fs])
