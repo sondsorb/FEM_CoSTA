@@ -230,9 +230,10 @@ class Heat(Fem_1d):
         self.time += self.k
         M,A,F = self.__discretize()
         self.F = F
+        self.M = M
         self.MA = M+A*self.k
         self.__add_Dirichlet_bdry(g=g)
-        self.u_fem = np.linalg.solve(self.MA, M@u_prev+F*self.k+correction) #Solve system
+        self.u_fem = np.linalg.solve(self.MA, M@u_prev+self.F*self.k+correction) #Solve system
 
 
     def solve(self, time_steps, u0=None, g=None, T=1):

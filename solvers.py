@@ -37,8 +37,8 @@ class Solvers:
             self.hamNNs.append(self.set_NN_model(**NNkwargs))#,init=0.05))
             self.pureNNs.append(self.set_NN_model(**NNkwargs,init=False))
 
-    def set_NN_model(self, model=None, l=3, n=16, epochs=10000, patience=[50,50], min_epochs=[250,500], lr=1e-5, noise_level=0, init=False):
-        self.normalize =0#True#False
+    def set_NN_model(self, model=None, l=3, n=16, epochs=[50,5000], patience=[20,20], min_epochs=[250,500], lr=1e-5, noise_level=0, init=False):
+        self.normalize =True#False
         self.alpha_feature = 0#True
         self.nfeats = 0#1 # number of extra features (like alpha, time,)
         if self.alpha_feature:
@@ -46,16 +46,20 @@ class Solvers:
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
-        self.noise_level = 1e-2#noise_level
+        self.noise_level = noise_level
         if model != None:
             self.model=model
             return
+
+        def lrelu(x):
+            return tf.keras.activations.relu(x, alpha=0.01)#, threshold=0,  max_value=0.01)
 
         model1 = keras.Sequential(
             [
                 layers.Dense(
                     n, 
-                    activation="sigmoid", 
+                    #activation="sigmoid", 
+                    activation=lrelu,
                     input_shape=(self.Np+self.nfeats,), 
                     #kernel_regularizer=keras.regularizers.L2(),
                     #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.10, maxval=0.10),
@@ -63,15 +67,18 @@ class Solvers:
                     #bias_initializer='zeros',
                     ),
                 #layers.LeakyReLU(0.01),
+                #layers.ReLU(),#negative_slope = 0.00),
             ] + [
                 layers.Dense(
                     n, 
-                    activation="sigmoid",
+                    #activation="sigmoid",
+                    activation=lrelu,
                     #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05),
                     #kernel_initializer='zeros',
                     #bias_initializer='zeros',
                     ),
                 #layers.LeakyReLU(0.01),
+                #layers.ReLU(),#negative_slope = 0.00),
             ]*(l-2) + [
                 layers.Dense(
                     self.Np-2,
@@ -135,11 +142,18 @@ class Solvers:
             self.ham_var = np.var(X) if self.normalize else 1
             self.pnn_mean = np.mean(pnnX) if self.normalize else 0
             self.pnn_var = np.var(pnnX) if self.normalize else 1
-            #print('mean, var = ',self.mean, self.var)
+            self.ham_Y_mean = np.mean(Y) if self.normalize else 0
+            self.ham_Y_var = np.var(Y) if self.normalize else 1
+            self.pnn_Y_mean = np.mean(pnnY) if self.normalize else 0
+            self.pnn_Y_var = np.var(pnnY) if self.normalize else 1
         X = X-self.ham_mean
         X = X/self.ham_var**0.5
+        Y = Y-self.ham_Y_mean
+        Y = Y/self.ham_Y_var**0.5
         pnnX = pnnX-self.pnn_mean
         pnnX = pnnX/self.pnn_var**0.5
+        pnnY = pnnY-self.pnn_Y_mean
+        pnnY = pnnY/self.pnn_Y_var**0.5
         #print(X)
         X[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noise_level-self.noise_level/2
         pnnX[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noise_level-self.noise_level/2
@@ -176,7 +190,7 @@ class Solvers:
             val_hist = train_result.history['val_loss']
             # train with patience 20
             train_result = model.fit(X, Y, 
-                    epochs=self.epochs, 
+                    epochs=self.epochs[0], 
                     callbacks = [keras.callbacks.EarlyStopping(patience=self.patience[0])], 
                     **train_kwargs)
             train_hist.extend(train_result.history['loss'])
@@ -196,7 +210,7 @@ class Solvers:
             val_hist = train_result.history['val_loss']
             # train with patience 20
             train_result = model.fit(pnnX, pnnY, 
-                    epochs=self.epochs, 
+                    epochs=self.epochs[1], 
                     callbacks = [keras.callbacks.EarlyStopping(patience=self.patience[1])], 
                     **train_kwargs)
             train_hist.extend(train_result.history['loss'])
@@ -239,7 +253,7 @@ class Solvers:
             for t in range(3):
                 plt.plot(self.tri[1:-1], Y[t], 'k',  label='exact source')
                 for model in self.hamNNs:
-                    plt.plot(self.tri[1:-1], model(np.array([X[t]]))[0], 'r',  label='ham source')
+                    plt.plot(self.tri[1:-1], model(np.array([X[t]]))[0], 'r--',  label='ham source')
                 plt.legend(title='trainset')
                 plt.grid()
                 plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_train_{t}.pdf')
@@ -247,7 +261,7 @@ class Solvers:
     
                 plt.plot(self.tri[1:-1], Y_val[t], 'k',  label='exact source')
                 for model in self.hamNNs:
-                    plt.plot(self.tri[1:-1], model(np.array([X_val[t]]))[0], 'r',  label='ham source')
+                    plt.plot(self.tri[1:-1], model(np.array([X_val[t]]))[0], 'r--',  label='ham source')
                 plt.legend(title='valset')
                 plt.grid()
                 plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_val_{t}.pdf')
@@ -255,7 +269,7 @@ class Solvers:
     
                 plt.plot(self.tri[1:-1], Y_test[t], 'k',  label='exact source')
                 for model in self.hamNNs:
-                    plt.plot(self.tri[1:-1], model(np.array([X_test[t]]))[0], 'r',  label='ham source')
+                    plt.plot(self.tri[1:-1], model(np.array([X_test[t]]))[0], 'r--',  label='ham source')
                 plt.legend(title='testset')
                 plt.grid()
                 plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_test_{t}.pdf')
@@ -264,7 +278,7 @@ class Solvers:
                 # PNN 
                 plt.plot(self.tri[1:-1], pnnY[t], 'k',  label='exact temp')
                 for model in self.pureNNs:
-                    plt.plot(self.tri[1:-1], model(np.array([pnnX[t]]))[0], 'r',  label='pnn temp')
+                    plt.plot(self.tri[1:-1], model(np.array([pnnX[t]]))[0], 'r--',  label='pnn temp')
                 plt.legend(title='trainset')
                 plt.grid()
                 plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_train_{t}.pdf')
@@ -272,7 +286,7 @@ class Solvers:
     
                 plt.plot(self.tri[1:-1], pnnY_val[t], 'k',  label='exact temp')
                 for model in self.pureNNs:
-                    plt.plot(self.tri[1:-1], model(np.array([pnnX_val[t]]))[0], 'r',  label='pnn temp')
+                    plt.plot(self.tri[1:-1], model(np.array([pnnX_val[t]]))[0], 'r--',  label='pnn temp')
                 plt.legend(title='valset')
                 plt.grid()
                 plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_val_{t}.pdf')
@@ -280,7 +294,7 @@ class Solvers:
     
                 plt.plot(self.tri[1:-1], pnnY_test[t], 'k',  label='exact temp')
                 for model in self.pureNNs:
-                    plt.plot(self.tri[1:-1], model(np.array([pnnX_test[t]]))[0], 'r',  label='pnn temp')
+                    plt.plot(self.tri[1:-1], model(np.array([pnnX_test[t]]))[0], 'r--',  label='pnn temp')
                 plt.legend(title='testset')
                 plt.grid()
                 plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_test_{t}.pdf')
@@ -308,6 +322,8 @@ class Solvers:
             X = (X-self.ham_mean)/self.ham_var**0.5
             correction = np.zeros(self.Np)
             correction[1:-1] = NN(X)[0,:]
+            correction = correction*self.ham_Y_var**0.5
+            correction = correction + self.ham_Y_mean
             #correction = NN(X)[0,:].numpy()
             #u_prev[1:-1] = u_prev[1:-1] + correction # add correction to previous solution
             fem_model.u_fem = u_prev
@@ -343,8 +359,10 @@ class Solvers:
                     plt.plot(self.tri, X[0,:self.Np],'r', label='new')
                     plt.plot(self.tri, u_ex(x=self.tri, t=t*k),'k--', label='ex')
             ##x_prev = X.copy() ## input_diff_test
-            X = (X-self.pnn_mean)/self.pnn_var**0.5
+            X = (X-self.pnn_mean)/self.pnn_var**0.5 # normalize NN input
             u_NN = NN(X)
+            u_NN = u_NN *self.pnn_Y_var**0.5 # unnormalize NN output
+            u_NN = u_NN + self.pnn_Y_mean
             ##u_NN = u_prev + NN(X) ## diff_test
         if plot_steps:
             plt.grid()

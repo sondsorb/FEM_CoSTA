@@ -31,14 +31,14 @@ def set_args(mode=mode):
         NoM = 2
     elif mode == 'quick_test':
         Ne = 20
-        time_steps = 200
-        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,50]}
+        time_steps = 500
+        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,30]}
         NoM=3
     elif mode == 'full_test':
         Ne = 20
         time_steps = 5000
-        NNkwargs = {'l':6,'n':80, 'lr':1e-5, 'patience':[20,100]}
-        NoM=4
+        NNkwargs = {'l':6,'n':80, 'lr':1e-5, 'patience':[20,40]}
+        NoM=1
 
 set_args()
 
@@ -63,26 +63,26 @@ print(f'Using p={p}')
 femscores = []
 costascores = []
 pnnscores = []
-for sol in range(1,5):
+for sol in [3,4,1,2]:
     print(f'sol: {sol}\n')
     model = solvers.Solvers(p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, NoM=NoM, **NNkwargs)
-    extra_tag = 'noise'#_long_training'#'' # for different names when testing specific stuff
+    extra_tag = ''#_long_training'#'' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     #figname = ''
-    #model.plot=False
+    model.plot=False
     model.train(figname=figname)
 
     #model.plot=True
     #fs, cs = model.test()
     #femscores.append([fs[k] for k in fs])
     #costascores.append([cs[k] for k in cs])
-    #model.plot=True
+    model.plot=True
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
-    #figname = ''
+    figname = ''
     _ = model.test(interpol = True, figname=figname)
-    figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/extrapol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
+    #figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/extrapol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     #figname = ''
-    _ = model.test(interpol = False, figname=figname)
+    #_ = model.test(interpol = False, figname=figname)
 #    fs, cs, ps = model.test(False, figname)
 #    femscores.append([fs[k] for k in fs])
 #    costascores.append([cs[k] for k in cs])
