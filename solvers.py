@@ -37,7 +37,7 @@ class Solvers:
             self.hamNNs.append(self.set_NN_model(**NNkwargs))#,init=0.05))
             self.pureNNs.append(self.set_NN_model(**NNkwargs,init=False))
 
-    def set_NN_model(self, model=None, l=3, n=16, epochs=[50,5000], patience=[20,20], min_epochs=[250,500], lr=1e-5, noise_level=0, init=False):
+    def set_NN_model(self, model=None, l=3, n=16, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], lr=1e-5, noise_level=0, init=False):
         self.normalize =True#False
         self.alpha_feature = 0#True
         self.nfeats = 0#1 # number of extra features (like alpha, time,)
