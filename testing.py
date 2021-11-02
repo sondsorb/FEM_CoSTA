@@ -33,7 +33,7 @@ def set_args(mode=mode):
         Ne = 20
         time_steps = 500
         NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,20]}
-        NoM=3
+        NoM=4
     elif mode == 'full_test':
         Ne = 20
         time_steps = 5000
@@ -49,9 +49,9 @@ if len(sys.argv)>2:
         source = False
     else:
         print('failed reading source term')
-        source = True
+        source = False
 else:
-    source = True
+    source = False
 print('Using exact source' if source else 'Using unknown source (i.e. guessing zero)')
 
 if len(sys.argv)>3:
@@ -60,16 +60,21 @@ else:
     p=1
 print(f'Using p={p}')
 
+modelnames = {
+        #'DNN' : NoM,
+        'LSTM' : 1,#NoM,
+        'CoSTA_DNN' : NoM,
+        }
 femscores = []
 costascores = []
 pnnscores = []
-for sol in [3,4,1,2]:
+for sol in [4,1,2]:
     print(f'sol: {sol}\n')
-    model = solvers.Solvers(p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, NoM=NoM, **NNkwargs)
+    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, **NNkwargs)
     extra_tag = ''#_long_training'#'' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
-    #figname = None
-    model.plot=False
+    figname = None
+    #model.plot=False
     model.train(figname=figname)
 
     #model.plot=True
@@ -78,7 +83,7 @@ for sol in [3,4,1,2]:
     #costascores.append([cs[k] for k in cs])
     #model.plot=True
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
-    #figname = None
+    figname = None
     _ = model.test(interpol = True, figname=figname)
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/extrapol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     #figname = None

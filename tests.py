@@ -1,10 +1,24 @@
-# This file contains test to verify that the code in this project works as it should
+# This file contains tests to verify that the code in this project works as it should
 
 import numpy as np
 import quadrature
 import functions
 import FEM
+import solvers
 from matplotlib import pyplot as plt
+
+def test_reshaping():
+    i=3
+    j=5
+    k=7
+    a = np.arange(i*j*k)
+    b = np.reshape(a, (i,j,k))
+    c = solvers.merge_first_dims(b)
+    for ii in range(i):
+        for jj in range(j):
+            for kk in range(k):
+                assert c[jj*i+ii,kk] == b[ii,jj,kk]
+    print('reshape function passed')
 
 def test1():
     def f(x): return 2*(1+x)**-3
@@ -139,6 +153,7 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
+    test_reshaping()
     test1()
     abdullah_bug_test()
     sindres_mfact_test(0,1)
