@@ -13,6 +13,7 @@ COLORS = {
         'DNN':'y',
         'CoSTA_DNN':'g',
         'LSTM':'r',
+        'CoSTA_LSTM':'c',
         }
 
 def get_DNN(input_shape, output_length, n, l, lr):
@@ -272,7 +273,6 @@ class LSTM_solver:
             u_NN = self.model(X)
             u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
             u_NN = u_NN + self.Y_mean
-            print(u_NN)
         result = np.zeros((self.Np))
         result[1:self.Np-1] = u_NN
         result[0] = u_ex(x=0,t=self.T)
@@ -354,16 +354,129 @@ class CoSTA_DNN_solver:
             X = (X-self.mean)/self.var**0.5
             correction = np.zeros(self.Np)
             correction[1:-1] = self.model(X)[0,:]
-            correction = correction*self.Y_var**0.5
-            correction = correction + self.Y_mean
-            #correction = NN(X)[0,:].numpy()
-            #u_prev[1:-1] = u_prev[1:-1] + correction # add correction to previous solution
+            correction[1:-1] = correction[1:-1]*self.Y_var**0.5
+            correction[1:-1] = correction[1:-1] + self.Y_mean
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
         return fem_model.u_fem
 
 
+class CoSTA_LSTM_solver:
+    def __init__(self, Np, T, p, tri, time_steps, l=3, n=16, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], lr=1e-5, noise_level=0):
+        self.name = 'CoSTA_LSTM'
+        self.Np = Np
+        self.p = p
+        self.T = T
+        self.tri = np.linspace(0,1,self.Np)
+        self.time_steps = time_steps
+        self.normalize =True#False
+        self.epochs = epochs
+        self.patience = patience
+        self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
+        self.noise_level = noise_level
+        self.input_period = 10
+
+        self.model = get_LSTM(n=n, l=l, input_shape=(self.input_period, self.Np,), output_length = Np-2, lr=lr)
+
+    def __prep_data(self, data, set_norm_params):
+
+        # Make X array with values from previous times
+        l = self.input_period
+        X = np.zeros((data.shape[0]+1-l, data.shape[1], l, self.Np))
+        for t in range(1, 1+l):
+            X[:,:,l-t,:] = data[l-t:data.shape[0]-t+1, :, :self.Np]
+        X = merge_first_dims(X)
+        Y = data[l-1:,:, self.Np:]
+        Y = merge_first_dims(Y)
+
+        # Shuffle input and output
+        P = np.random.permutation(X.shape[0])
+        X = X[P,:,:]
+        Y = Y[P,:]
+
+        if set_norm_params: # only training set, not val
+            self.mean = np.mean(X) if self.normalize else 0
+            self.var = np.var(X) if self.normalize else 1
+            self.Y_mean = np.mean(Y) if self.normalize else 0
+            self.Y_var = np.var(Y) if self.normalize else 1
+        X = X-self.mean
+        X = X/self.var**0.5
+        Y = Y-self.Y_mean
+        Y = Y/self.Y_var**0.5
+        X[:,:,1:-1] += np.random.rand(X.shape[0],l,self.Np-2)*self.noise_level-self.noise_level/2
+        return X,Y
+
+    def train(self, train_data, val_data):
+        X,Y = self.__prep_data(train_data['ham'], True)
+        X_val,Y_val = self.__prep_data(val_data['ham'], False)
+
+        train_kwargs = {
+                'batch_size':32,
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+
+        train_kwargs = {
+                'batch_size':32,
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+
+        # train for minimum 100 steps
+        train_result = self.model.fit(X, Y, epochs=self.min_epochs[0]-self.patience[0], **train_kwargs)
+        self.train_hist = train_result.history['loss']
+        self.val_hist = train_result.history['val_loss']
+
+        # train with patience 20
+        train_result = self.model.fit(X, Y,
+                epochs=self.epochs[0],
+                callbacks = [keras.callbacks.EarlyStopping(patience=self.patience[0])],
+                **train_kwargs)
+        self.train_hist.extend(train_result.history['loss'])
+        self.val_hist.extend(train_result.history['val_loss'])
+
+    def __call__(self, f, u_ex, alpha=None):
+        l=self.input_period
+        X=np.zeros((1,l, self.Np))
+        k=self.T/self.time_steps
+        X[:,0,:] = u_ex(self.tri, t=0)
+
+        # Define fem model
+        fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
+
+        # Calculate initial input vector
+        for t in range(1,l+1):
+            fem_model.u_fem = u_ex(self.tri, t=-t*k) # TODO: find a porper way to do this (backward exxtrapolation not always possible
+            fem_model.time = -t*k
+            fem_model.step() # make one step from exact solution (as the LSTM model is trained on)
+            X[:,l-t,:] = fem_model.u_fem
+        X = (X-self.mean)/self.var**0.5 # normalize NN input
+  
+        # Reset fem model
+        fem_model.time = 0
+        fem_model.u_fem =fem_model.u_ex(fem_model.tri, t=fem_model.time)
+
+        for t in range(self.time_steps):
+            X[:,:-1,:] = X[:,1:,:] # move input data one step forward
+            u_prev = fem_model.u_fem # save previous solution
+            fem_model.step() # first, uncorrected, step
+            fem_step = fem_model.u_fem
+            X[:,-1:,:self.Np] = fem_step
+            X[:,-1,:] = (X[:,-1,:]-self.mean)/self.var**0.5 # normalize NN input (only last entry)
+            correction = np.zeros(self.Np)
+            correction[1:-1] = self.model(X)[0,:]
+            correction[1:-1] = correction[1:-1]*self.Y_var**0.5
+            correction[1:-1] = correction[1:-1] + self.Y_mean
+            fem_model.u_fem = u_prev
+            fem_model.time -= fem_model.k # set back time for correction
+            fem_model.step(correction=correction) # corrected step
+        return fem_model.u_fem
+
+
+#####################################################################
+###   Solver class compares the different solvers defined above   ###
+#####################################################################
 class Solvers:
     def __init__(self, models=None, modelnames=None, sol=3, unknown_source=True, Ne=10, time_steps=20, p=1, T=1, **NNkwargs):
         '''
@@ -399,6 +512,8 @@ class Solvers:
                         self.models.append(LSTM_solver(T=T, tri=self.tri, time_steps=time_steps, Np=self.Np, **NNkwargs))
                     if modelname == 'CoSTA_DNN':
                         self.models.append(CoSTA_DNN_solver(p=p, T=T, Np=self.Np, tri=self.tri, time_steps=time_steps, **NNkwargs))
+                    if modelname == 'CoSTA_LSTM':
+                        self.models.append(CoSTA_LSTM_solver(p=p, T=T, Np=self.Np, tri=self.tri, time_steps=time_steps, **NNkwargs))
 
         if models != None:
             self.models = models
@@ -409,17 +524,7 @@ class Solvers:
                 else:
                     self.modelnames[model.name] = 1
 
-
-        #self.hamNNs= []
-        #self.pureNNs=[]
-        #for i in range(NoM):
-        #    self.hamNNs.append(self.set_NN_model(**NNkwargs))#,init=0.05))
-        #    self.pureNNs.append(self.set_NN_model(**NNkwargs,init=False))
-
         self.create_data()
-
-
-
 
 
 
@@ -429,7 +534,7 @@ class Solvers:
         extra_feats=np.zeros((self.time_steps,len(alphas),2)) # alpha and time
         for i, alpha in enumerate(alphas):
             print(f'--- making data set for alpha {alpha} ---')
-            f, u_ex = functions.sbmfact(alpha=alpha)[self.sol]
+            f, u_ex = functions.sbmfact(T=5, alpha=alpha)[self.sol]
             if self.unknown_source:
                 f=FEM.zero
             fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
@@ -446,34 +551,7 @@ class Solvers:
                 pnn_data[t,i, self.Np:] = ex_step[1:-1]
                 ham_data[t,i, self.Np:] = (fem_model.MA @ error)[1:-1] # residual
         return {'ham':ham_data, 'pnn':pnn_data, 'extra_feats':extra_feats}
-        #np.random.shuffle(ham_data)
-        #np.random.shuffle(pnn_data)
-        #X = ham_data[:,:self.Np+self.nfeats]
-        #Y = ham_data[:,self.Np+self.nfeats+1:-1]
-        #pnnX = pnn_data[:,:self.Np+self.nfeats]
-        #pnnY = pnn_data[:,self.Np+self.nfeats+1:-1]
-        ##print(X)
-        #if set_norm_params: # only training set, not val
-        #    self.ham_mean = np.mean(X) if self.normalize else 0
-        #    self.ham_var = np.var(X) if self.normalize else 1
-        #    self.pnn_mean = np.mean(pnnX) if self.normalize else 0
-        #    self.pnn_var = np.var(pnnX) if self.normalize else 1
-        #    self.ham_Y_mean = np.mean(Y) if self.normalize else 0
-        #    self.ham_Y_var = np.var(Y) if self.normalize else 1
-        #    self.pnn_Y_mean = np.mean(pnnY) if self.normalize else 0
-        #    self.pnn_Y_var = np.var(pnnY) if self.normalize else 1
-        #X = X-self.ham_mean
-        #X = X/self.ham_var**0.5
-        #Y = Y-self.ham_Y_mean
-        #Y = Y/self.ham_Y_var**0.5
-        #pnnX = pnnX-self.pnn_mean
-        #pnnX = pnnX/self.pnn_var**0.5
-        #pnnY = pnnY-self.pnn_Y_mean
-        #pnnY = pnnY/self.pnn_Y_var**0.5
-        ##print(X)
-        #X[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noise_level-self.noise_level/2
-        #pnnX[:,1:-1] += np.random.rand(self.time_steps*len(alphas),self.Np-2)*self.noise_level-self.noise_level/2
-        #return X,Y, pnnX, pnnY
+
 
     def create_data(self):
         start_time = datetime.datetime.now()
@@ -486,13 +564,13 @@ class Solvers:
         print(f'\nTime making data set: {datetime.datetime.now()-start_time}')
 
 
-
     def train(self, figname=None):
-
         start_time = datetime.datetime.now()
 
         # prepare plotting
         fig, axs = plt.subplots(1,len(self.modelnames)) # For now, this requires self.models to be sorted by names
+        if len(self.modelnames) == 1:
+            axs=[axs] # required for indexing later
         prev_name = ''
         i=-1
 
@@ -532,54 +610,6 @@ class Solvers:
         else:
             plt.close()
 
-        #ham_train_hists = []
-        #ham_val_hists = []
-        #for model in self.hamNNs:
-        #    # train for minimum 100 steps
-        #    train_result = model.fit(X, Y, epochs=self.min_epochs[0]-self.patience[0], **train_kwargs)
-        #    train_hist = train_result.history['loss']
-        #    val_hist = train_result.history['val_loss']
-        #    # train with patience 20
-        #    train_result = model.fit(X, Y,
-        #            epochs=self.epochs[0],
-        #            callbacks = [keras.callbacks.EarlyStopping(patience=self.patience[0])],
-        #            **train_kwargs)
-        #    train_hist.extend(train_result.history['loss'])
-        #    val_hist.extend(train_result.history['val_loss'])
-        #    ham_train_hists.append(train_hist)
-        #    ham_val_hists.append(val_hist)
-        #print(f'\nTime training ham NNs: {datetime.datetime.now()-start_time}')
-
-
-        #fig, axs = plt.subplots(1,2)
-        #for hist in ham_train_hists:
-        #    epochs_vector = np.arange(1, len(hist)+1)
-        #    axs[0].plot(epochs_vector, hist, 'b--', label='train_losses')
-        #for hist in ham_val_hists:
-        #    epochs_vector = np.arange(1, len(hist)+1)
-        #    axs[0].plot(epochs_vector, hist, 'r', label='val_losses')
-        #axs[0].set_yscale('log')
-        #axs[0].set_xlabel('Number of epochs')
-        #axs[0].set_ylabel('Loss (MSE)')
-        #axs[0].legend(title='hamNN')
-        #axs[0].grid()
-        #for hist in pnn_train_hists:
-        #    epochs_vector = np.arange(1, len(hist)+1)
-        #    axs[1].plot(epochs_vector, hist, 'b--', label='train_losses')
-        #for hist in pnn_val_hists:
-        #    epochs_vector = np.arange(1, len(hist)+1)
-        #    axs[1].plot(epochs_vector, hist, 'r', label='val_losses')
-        #axs[1].set_yscale('log')
-        #axs[1].set_xlabel('Number of epochs')
-        #axs[1].set_ylabel('Loss (MSE)')
-        #axs[1].legend(title='pureNN')
-        #axs[1].grid()
-        #if figname != None:
-        #    plt.savefig(figname)
-        #if self.plot:
-        #    plt.show()
-        #else:
-        #    plt.close()
         #if plot_one_step_sources:
         #    # Plot some source terms
         #    for t in range(3):
@@ -633,19 +663,18 @@ class Solvers:
         #        plt.show()
 
 
-    def test(self, interpol = True, figname=None):
+    def test(self, interpol = True, figname=None, statplot = 5):
+        '''
+        interpol - (bool) use interpolating or extrapolating alpha set
+        figname - (string or None) filename to save figure to. Note saved if None.
+        statplot - (bool or int) if plots should be of mean and variance (instead of every solution). If int, then statplot is set to len(models)>statplot
+        '''
         start_time = datetime.datetime.now()
         alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
-        #fem_score = {}
-        #fem_score_tri = {}
-        #costa_score = {}
-        #costa_score_tri = {}
-        #pnn_score = {}
-        #pnn_score_tri = {}
 
         # prepare plotting
-        stat_plot_threshold = 5
-        statplot = len(self.models) > stat_plot_threshold
+        if type(statplot) == int:
+            statplot = len(self.models) > statplot
         fig, axs = plt.subplots(1,len(alphas))
 
         for i, alpha in enumerate(alphas):
@@ -658,24 +687,28 @@ class Solvers:
             fem_model.solve(self.time_steps, T = self.T)
             tri_fine = np.linspace(0,1,self.Ne*self.p*8+1)
             axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'b', label='fem')
-            #fem_score[f'{alpha}'] = fem_model.relative_L2()
-            #fem_score_tri[f'{alpha}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
 
             # prepare plotting
             prev_name = ''
             graphs = {}
+            L2_scores = {'FEM' : [fem_model.relative_L2()]}
+            def rel_l2() : return np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
+            l2_scores = {'FEM' : [rel_l2()]}
 
             for model in self.models:
                 fem_model.u_fem = model(f,u_ex,alpha) # store in fem_model for easy use of relative_L2 and soltion functoins
                 if prev_name != model.name:
                     prev_name = model.name
                     graphs[model.name] = []
+                    scores[model.name] = []
                     if not statplot:
                         axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name], label=model.name)
                 else:
                     if not statplot:
                         axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name])
                 graphs[model.name].append(fem_model.solution(tri_fine))
+                L2_scores[model.name].append(fem_model.relative_L2())
+                l2_scores[model.name].append(rel_l2())
 
             if statplot:
                 for name in graphs:
@@ -684,37 +717,14 @@ class Solvers:
                     std = np.std(curr_graphs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
                     axs[i].plot(tri_fine, mean, color=COLORS[name])
                     axs[i].fill_between(tri_fine, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
-
-
-            ## Solve with HAM
-            #for m in range(self.NoM):
-            #    fem_model.u_fem =self(alpha, model_index=m) # store in fem_model for easy use of relative_L2 and soltion functoins
-            #    axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'g', label='costa')
-            #    costa_score[f'{alpha},{m}'] = fem_model.relative_L2()
-            #    costa_score_tri[f'{alpha},{m}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
-
-            ## Solve with DNN
-            #for m in range(self.NoM):
-            #    fem_model.u_fem =self.call_PNN(alpha, model_index=m) # store in fem_model for easy use of relative_L2 and soltion functoins
-            #    axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'y', label='pureNN')
-            #    pnn_score[f'{alpha},{m}'] = fem_model.relative_L2()
-            #    pnn_score_tri[f'{alpha},{m}'] = np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
             axs[i].plot(tri_fine, u_ex(tri_fine), 'k--', label='exact')
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
-        #print('')
-        #print('FEM L2 errors:', fem_score)
-        #print('CoSTA L2 errors:', costa_score)
-        #print('PureNN L2 errors:', pnn_score)
-        #print('FEM l2 errors:', fem_score_tri)
-        #print('CoSTA l2 errors:', costa_score_tri)
-        #print('PureNN l2 errors:', pnn_score_tri)
-        #print('')
         if figname != None:
             plt.savefig(figname)
         if self.plot:
             plt.show()
         else:
             plt.close()
-        #return fem_score_tri, costa_score_tri, pnn_score_tri
+        return L2_scores, l2_scores

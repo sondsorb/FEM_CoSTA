@@ -61,9 +61,10 @@ else:
 print(f'Using p={p}')
 
 modelnames = {
-        #'DNN' : NoM,
-        'LSTM' : 1,#NoM,
+        'DNN' : NoM,
+        'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
+        'CoSTA_LSTM' : NoM,
         }
 femscores = []
 costascores = []
