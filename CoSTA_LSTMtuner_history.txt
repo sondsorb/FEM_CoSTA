@@ -1,0 +1,56 @@
+
+
+
+2021-11-03 15:38:47.320622
+Using training parameters: {'lr': 8e-05, 'patience': [20, 20], 'epochs': [1000, 1000], 'min_epochs': [50, 50]}
+
+Score to beat: 0.03910174460066155
+Configs now: {'lstm_layers': 4, 'lstm_depth': 50, 'dense_layers': 1, 'dense_depth': 50, 'input_period': 10}
+Changing lstm_depth from 50 by adding -12
+new score 0.12409353122829309
+Changing lstm_depth from 50 by adding 12
+new score 0.015275084360656228
+Changing lstm_depth from 62 by adding 15
+new score 0.07210007643788423
+Changing dense_depth from 50 by adding 12
+new score 0.04591389612766836
+Changing dense_depth from 50 by adding -12
+new score 0.0347046001851718
+Changing dense_layers from 1 by adding 1
+new score 0.3081470335763355
+Changing dense_layers from 1 by adding -1
+new score 2.3794879519517736e+21
+Changing lstm_layers from 4 by adding 1
+new score 0.03428788302839995
+Changing lstm_layers from 4 by adding -1
+new score 0.011889966287947711
+Changing lstm_layers from 3 by adding -1
+new score 0.04421258816012331
+Changing input_period from 10 by adding 2
+new score 0.05643084370910825
+Changing input_period from 10 by adding -2
+new score 44741066582.65155
+Score to beat: 0.020182070372921034
+Configs now: {'lstm_layers': 3, 'lstm_depth': 62, 'dense_layers': 1, 'dense_depth': 50, 'input_period': 10}
+Changing lstm_layers from 3 by adding 1
+new score 0.07207074228157594
+Changing lstm_layers from 3 by adding -1
+new score 0.011453134038756535
+Changing lstm_layers from 2 by adding -1
+new score 0.013970500260531015
+Changing lstm_depth from 62 by adding -15
+new score 0.060729477645224794
+Changing lstm_depth from 62 by adding 15
+new score 0.016679592481355563
+Changing input_period from 10 by adding 2
+new score 0.024629396830570416
+Changing input_period from 10 by adding -2
+new score 0.014826445756355682
+Changing dense_depth from 50 by adding -12
+new score 0.05997418102270053
+Changing dense_depth from 50 by adding 12
+new score 0.014685967255021096
+Changing dense_layers from 1 by adding 1
+new score 0.014228807022352477
+Changing dense_layers from 1 by adding -1
+new score 0.029764627040650474

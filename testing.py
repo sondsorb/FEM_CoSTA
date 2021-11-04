@@ -2,6 +2,7 @@ import numpy as np
 import quadrature
 import FEM
 import solvers
+import functions
 from matplotlib import pyplot as plt
 import sys
 
@@ -23,22 +24,28 @@ else:
 
 def set_args(mode=mode):
     print(f'\nTesting with mode "{mode}"...')
-    global Ne, time_steps, NNkwargs, NoM
+    global Ne, time_steps, DNNkwargs, LSTMkwargs, NoM, time_delta
     if mode == 'bugfix':
         Ne = 5
         time_steps = 20
-        NNkwargs = {'l':4,'n':20,'lr':5e-3,'patience':[10,20]}
+        DNNkwargs = {'n_layers':4,'depth':20,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
+        LSTMkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'lr':5e-3, 'patience':[10,10], 'epochs':[100,100], 'min_epochs':[50,50]}
         NoM = 2
+        time_delta = 5
     elif mode == 'quick_test':
         Ne = 20
         time_steps = 500
-        NNkwargs = {'l':6,'n':80, 'lr':8e-5, 'patience':[20,20]}
+        DNNkwargs = {'n_layers':6,'depth':80, 'lr':8e-5, 'patience':[20,20]}
+        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20]}
         NoM=4
+        time_delta = 0.3 # max 30 steps back
     elif mode == 'full_test':
         Ne = 20
         time_steps = 5000
-        NNkwargs = {'l':6,'n':80, 'lr':1e-5, 'patience':[20,20]}
+        DNNkwargs = {'n_layers':6,'depth':80, 'lr':1e-5, 'patience':[20,20]}
+        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20]}
         NoM=1
+        time_delta = 0
 
 set_args()
 
@@ -61,17 +68,17 @@ else:
 print(f'Using p={p}')
 
 modelnames = {
-        'DNN' : NoM,
-        'LSTM' : NoM,
+        #'DNN' : NoM,
+        #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
-        'CoSTA_LSTM' : NoM,
+        #'CoSTA_LSTM' : NoM,
         }
-femscores = []
-costascores = []
-pnnscores = []
-for sol in [4,1,2]:
-    print(f'sol: {sol}\n')
-    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, unknown_source = not source, Ne=Ne, time_steps=time_steps, T=5, **NNkwargs)
+
+for sol_index in [3,4,1,2]:
+    print(f'sol_index: {sol_index}\n')
+    f,u = functions.SBMFACT[sol_index]
+    sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'{sol_index}', time_delta=time_delta)
+    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, DNNkwargs=DNNkwargs, LSTMkwargs=LSTMkwargs)
     extra_tag = ''#_long_training'#'' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     figname = None
@@ -79,26 +86,9 @@ for sol in [4,1,2]:
     model.train(figname=figname)
 
     #model.plot=True
-    #fs, cs = model.test()
-    #femscores.append([fs[k] for k in fs])
-    #costascores.append([cs[k] for k in cs])
-    #model.plot=True
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/interpol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     figname = None
     _ = model.test(interpol = True, figname=figname)
     figname = f'../preproject/1d_heat_figures/{"known_f" if source else "unknown_f"}/extrapol/sol{sol}_{mode}_p{p}{extra_tag}.pdf'
     #figname = None
     _ = model.test(interpol = False, figname=figname)
-#    fs, cs, ps = model.test(False, figname)
-#    femscores.append([fs[k] for k in fs])
-#    costascores.append([cs[k] for k in cs])
-#    pnnscores.append([ps[k] for k in cs])
-#femscores = np.array(femscores)
-#costascores = np.array(costascores)
-#pnnscores = np.array(costascores)
-##print(femscores)
-##print(costascores)
-#relscore = np.divide(costascores, femscores) # elementwise division
-#score = np.mean(relscore)
-#print(relscore)
-#print('----', score)

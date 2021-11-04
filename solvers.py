@@ -7,7 +7,6 @@ from tensorflow.keras import layers
 from matplotlib import pyplot as plt
 
 import FEM
-import functions
 
 COLORS = {
         'DNN':'y',
@@ -16,14 +15,15 @@ COLORS = {
         'CoSTA_LSTM':'c',
         }
 
-def get_DNN(input_shape, output_length, n, l, lr):
-    def lrelu(x):
-        return tf.keras.activations.relu(x, alpha=0.01)#, threshold=0,  max_value=0.01)
+def lrelu(x):
+    return tf.keras.activations.relu(x, alpha=0.01)#, threshold=0,  max_value=0.01)
+
+def get_DNN(input_shape, output_length, n_layers, depth, lr):
 
     model = keras.Sequential(
         [
             layers.Dense(
-                n,
+                depth,
                 #activation="sigmoid",
                 activation=lrelu,
                 input_shape=input_shape,
@@ -36,7 +36,7 @@ def get_DNN(input_shape, output_length, n, l, lr):
             #layers.ReLU(),#negative_slope = 0.00),
         ] + [
             layers.Dense(
-                n,
+                depth,
                 #activation="sigmoid",
                 activation=lrelu,
                 #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05),
@@ -45,7 +45,7 @@ def get_DNN(input_shape, output_length, n, l, lr):
                 ),
             #layers.LeakyReLU(0.01),
             #layers.ReLU(),#negative_slope = 0.00),
-        ]*(l-2) + [
+        ]*(n_layers-2) + [
             layers.Dense(
                 output_length,
                 #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-init, maxval=init) if init else None,
@@ -59,13 +59,21 @@ def get_DNN(input_shape, output_length, n, l, lr):
     model.compile(loss='mse', optimizer=opt)
     return model
 
-def get_LSTM(input_shape, output_length, n, l, lr):
+def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr):
     model = keras.Sequential()
-    model.add(layers.LSTM(n, activation='relu', input_shape=input_shape, return_sequences=True))
-    for i in range(l-2):
-        model.add(layers.LSTM(n, activation='relu', return_sequences=True))
-    model.add(layers.LSTM(n, activation='relu', return_sequences=False))
+    
+    # Add correct amount of LSTM layers
+    if lstm_layers == 1:
+        model.add(layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape, return_sequences=False))
+    if lstm_layers  > 1:
+        model.add(layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape, return_sequences=True))
+        for i in range(lstm_layers -2):
+            model.add(layers.LSTM(lstm_depth, activation=lrelu, return_sequences=True))
+        model.add(layers.LSTM(lstm_depth, activation=lrelu, return_sequences=False))
     #model.add(Dropout(0.2))
+
+    for i in range(dense_layers-1):
+        model.add(layers.Dense(dense_depth, activation=lrelu))
     model.add(layers.Dense(output_length))
 
     opt = keras.optimizers.Adam(learning_rate=lr)
@@ -86,7 +94,7 @@ def merge_first_dims(data):
 
 
 class DNN_solver:
-    def __init__(self, Np, tri, T, time_steps, l=3, n=16, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], lr=1e-5, noise_level=0):
+    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
         self.name = 'DNN'
         self.Np = Np
         self.tri = tri
@@ -98,7 +106,7 @@ class DNN_solver:
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
 
-        self.model = get_DNN(n=n, l=l, input_shape=(self.Np,), output_length = Np-2, lr=lr)
+        self.model = get_DNN(input_shape=(self.Np,), output_length = Np-2, **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
         data = merge_first_dims(data)
@@ -182,7 +190,7 @@ class DNN_solver:
 
 
 class LSTM_solver:
-    def __init__(self, Np, tri, T, time_steps, l=3, n=16, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], lr=1e-5, noise_level=0):
+    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, input_period=10, **NNkwargs):
         self.name = 'LSTM'
         self.Np = Np
         self.tri = tri
@@ -193,9 +201,9 @@ class LSTM_solver:
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
-        self.input_period = 10
+        self.input_period = input_period
 
-        self.model = get_LSTM(n=n, l=l, input_shape=(self.input_period, self.Np,), output_length = Np-2, lr=lr)
+        self.model = get_LSTM(input_shape=(self.input_period, self.Np,), output_length = Np-2, **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
 
@@ -280,7 +288,7 @@ class LSTM_solver:
         return result
 
 class CoSTA_DNN_solver:
-    def __init__(self, Np, T, p, tri, time_steps, l=3, n=16, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], lr=1e-5, noise_level=0):
+    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
         self.name = 'CoSTA_DNN'
         self.Np = Np
         self.p = p
@@ -293,7 +301,7 @@ class CoSTA_DNN_solver:
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
 
-        self.model = get_DNN(n=n, l=l, input_shape=(self.Np,), output_length = Np-2, lr=lr)
+        self.model = get_DNN(input_shape=(self.Np,), output_length = Np-2, **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
         data = merge_first_dims(data)
@@ -363,7 +371,7 @@ class CoSTA_DNN_solver:
 
 
 class CoSTA_LSTM_solver:
-    def __init__(self, Np, T, p, tri, time_steps, l=3, n=16, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], lr=1e-5, noise_level=0):
+    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, input_period=10, **NNkwargs):
         self.name = 'CoSTA_LSTM'
         self.Np = Np
         self.p = p
@@ -375,9 +383,9 @@ class CoSTA_LSTM_solver:
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
-        self.input_period = 10
+        self.input_period = input_period
 
-        self.model = get_LSTM(n=n, l=l, input_shape=(self.input_period, self.Np,), output_length = Np-2, lr=lr)
+        self.model = get_LSTM(input_shape=(self.input_period, self.Np,), output_length = Np-2, **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
 
@@ -478,7 +486,7 @@ class CoSTA_LSTM_solver:
 ###   Solver class compares the different solvers defined above   ###
 #####################################################################
 class Solvers:
-    def __init__(self, models=None, modelnames=None, sol=3, unknown_source=True, Ne=10, time_steps=20, p=1, T=1, **NNkwargs):
+    def __init__(self, sol, models=None, modelnames=None, Ne=10, time_steps=20, p=1, DNNkwargs={}, LSTMkwargs={}):
         '''
         either models or modelnames must be specified, not both
         models - list of models
@@ -487,10 +495,10 @@ class Solvers:
         assert models == None or modelnames == None
         assert models != None or modelnames != None
 
-        self.sol = sol # index of manufactured SOLution
+        self.sol = sol # solution
         self.Ne = Ne
         self.p = p
-        self.T = T
+        self.T = sol.T
         self.Np = Ne*p+1
         self.tri = np.linspace(0,1,self.Np)
         self.time_steps = time_steps
@@ -499,7 +507,6 @@ class Solvers:
         self.alpha_test_interpol = [.7,1.5]
         self.alpha_test_extrapol = [-0.5,2.5]
         self.plot = True
-        self.unknown_source = unknown_source
 
         if modelnames != None:
             self.modelnames = modelnames
@@ -507,13 +514,13 @@ class Solvers:
             for modelname in modelnames:
                 for i in range(modelnames[modelname]):
                     if modelname == 'DNN':
-                        self.models.append(DNN_solver(T=T, tri=self.tri, time_steps=time_steps, Np=self.Np, **NNkwargs))
+                        self.models.append(DNN_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **DNNkwargs))
                     if modelname == 'LSTM':
-                        self.models.append(LSTM_solver(T=T, tri=self.tri, time_steps=time_steps, Np=self.Np, **NNkwargs))
+                        self.models.append(LSTM_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **LSTMkwargs))
                     if modelname == 'CoSTA_DNN':
-                        self.models.append(CoSTA_DNN_solver(p=p, T=T, Np=self.Np, tri=self.tri, time_steps=time_steps, **NNkwargs))
+                        self.models.append(CoSTA_DNN_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps, **DNNkwargs))
                     if modelname == 'CoSTA_LSTM':
-                        self.models.append(CoSTA_LSTM_solver(p=p, T=T, Np=self.Np, tri=self.tri, time_steps=time_steps, **NNkwargs))
+                        self.models.append(CoSTA_LSTM_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps, **LSTMkwargs))
 
         if models != None:
             self.models = models
@@ -528,16 +535,15 @@ class Solvers:
 
 
 
-    def __data_set(self,alphas):
+    def __data_set(self,alphas, silence=False):
         ham_data=np.zeros((self.time_steps,len(alphas),self.Np + self.Np - 2)) # data for ham NN model
         pnn_data=np.zeros((self.time_steps,len(alphas),self.Np + self.Np - 2)) # data for pure NN model
         extra_feats=np.zeros((self.time_steps,len(alphas),2)) # alpha and time
         for i, alpha in enumerate(alphas):
-            print(f'--- making data set for alpha {alpha} ---')
-            f, u_ex = functions.sbmfact(T=5, alpha=alpha)[self.sol]
-            if self.unknown_source:
-                f=FEM.zero
-            fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
+            if not silence:
+                print(f'--- making data set for alpha {alpha} ---')
+            self.sol.set_alpha(alpha)
+            fem_model = FEM.Heat(self.tri, self.sol.f, self.p, self.sol.u, k=self.T/self.time_steps)
             for t in range(self.time_steps):
                 ex_step = fem_model.u_ex(fem_model.tri, t=fem_model.time) # exact solution before step
                 pnn_data[t,i,:self.Np] = ex_step
@@ -553,10 +559,10 @@ class Solvers:
         return {'ham':ham_data, 'pnn':pnn_data, 'extra_feats':extra_feats}
 
 
-    def create_data(self):
+    def create_data(self, silence = False):
         start_time = datetime.datetime.now()
-        self.train_data = self.__data_set(self.alpha_train)
-        self.val_data = self.__data_set(self.alpha_val)
+        self.train_data = self.__data_set(self.alpha_train, silence)
+        self.val_data = self.__data_set(self.alpha_val, silence)
 
         plot_one_step_sources = False
         if plot_one_step_sources:
@@ -678,12 +684,10 @@ class Solvers:
         fig, axs = plt.subplots(1,len(alphas))
 
         for i, alpha in enumerate(alphas):
-            f, u_ex = functions.sbmfact(T=self.T,alpha=alpha)[self.sol]
-            if self.unknown_source:
-                f=FEM.zero
+            self.sol.set_alpha(alpha)
 
             # Solve with FEM
-            fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
+            fem_model = FEM.Heat(self.tri, self.sol.f, self.p, self.sol.u, k=self.T/self.time_steps)
             fem_model.solve(self.time_steps, T = self.T)
             tri_fine = np.linspace(0,1,self.Ne*self.p*8+1)
             axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'b', label='fem')
@@ -696,11 +700,12 @@ class Solvers:
             l2_scores = {'FEM' : [rel_l2()]}
 
             for model in self.models:
-                fem_model.u_fem = model(f,u_ex,alpha) # store in fem_model for easy use of relative_L2 and soltion functoins
+                fem_model.u_fem = model(self.sol.f,self.sol.u,alpha) # store in fem_model for easy use of relative_L2 and soltion functoins
                 if prev_name != model.name:
                     prev_name = model.name
                     graphs[model.name] = []
-                    scores[model.name] = []
+                    L2_scores[model.name] = []
+                    l2_scores[model.name] = []
                     if not statplot:
                         axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name], label=model.name)
                 else:
@@ -717,9 +722,9 @@ class Solvers:
                     std = np.std(curr_graphs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
                     axs[i].plot(tri_fine, mean, color=COLORS[name])
                     axs[i].fill_between(tri_fine, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
-            axs[i].plot(tri_fine, u_ex(tri_fine), 'k--', label='exact')
+            axs[i].plot(tri_fine, self.sol.u(tri_fine), 'k--', label='exact')
             axs[i].grid()
-            axs[i].legend(title=f'sol={self.sol},a={alpha}')
+            axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
         if figname != None:
             plt.savefig(figname)
@@ -727,4 +732,5 @@ class Solvers:
             plt.show()
         else:
             plt.close()
+        print('scores (L2, l2):',L2_scores, l2_scores)
         return L2_scores, l2_scores

@@ -1,0 +1,23 @@
+
+
+
+2021-11-03 15:34:32.270833
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2021-11-03 15:35:29.326008
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Score to beat: 0.022609341658206245
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5}
+Changing dense_depth from 20 by adding 5
+new score 0.0240058848953199
+Changing dense_depth from 20 by adding -5
+new score 0.03228756640462435
+Changing input_period from 5 by adding -1
+new score 0.03679358745016678
+Changing input_period from 5 by adding 1
+new score 0.02311832035440886
+Changing lstm_layers from 2 by adding -1

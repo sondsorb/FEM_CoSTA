@@ -1,0 +1,15 @@
+
+
+
+2021-11-03 14:44:48.557474
+Using training parameters: {'lr': 8e-05, 'patience': [20, 20], 'epochs': [1000, 1000], 'min_epochs': [50, 50]}
+
+Score to beat: 1642351.058383934
+Configs now: {'lstm_layers': 4, 'lstm_depth': 50, 'dense_layers': 1, 'dense_depth': 50, 'input_period': 10}
+Changing lstm_depth from 50 by adding -12
+
+
+
+2021-11-03 15:31:55.899292
+Using training parameters: {'lr': 8e-05, 'patience': [20, 20], 'epochs': [1000, 1000], 'min_epochs': [50, 50]}
+
