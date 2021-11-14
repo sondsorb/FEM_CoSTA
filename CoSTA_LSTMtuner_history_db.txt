@@ -21,3 +21,67 @@ new score 0.03679358745016678
 Changing input_period from 5 by adding 1
 new score 0.02311832035440886
 Changing lstm_layers from 2 by adding -1
+
+
+
+2021-11-06 12:13:23.239031
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Score to beat: 0.08627
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5}
+
+
+
+2021-11-06 12:14:17.688518
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Score to beat: 0.08627
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
+Changing dropout_level from 0.2 by adding 0.1
+new score 0.049335438153253905
+Changing dropout_level from 0.30000000000000004 by adding 0.1
+new score 0.026749490548838677
+Changing dropout_level from 0.4 by adding 0.1
+new score 0.06489252418317289
+Changing noise_level from 0.001 by adding 0.1
+new score 0.042846901722478584
+Changing noise_level from 0.001 by adding 0.1
+
+
+
+2021-11-06 12:17:54.932052
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Score to beat: 0.08627
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
+Changing dropout_level from 0.2 by adding -0.05
+new score 0.03039578339195996
+Changing dropout_level from 0.15000000000000002 by adding -0.05
+new score 0.03902803253581916
+Changing noise_level from 0.001 by adding -0.05
+new score 0.04058891454975984
+Changing noise_level from 0.001 by adding -0.05
+new score 0.03581823090685476
+Score to beat: 0.0356940434150301
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.15000000000000002}
+Changing noise_level from 0.001 by adding -0.05
+new score 0.030399473243151957
+Changing noise_level from -0.049 by adding -0.05
+
+
+
+2021-11-06 12:20:36.468979
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Score to beat: 0.08627
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
+Changing dropout_level from 0.2 by adding 0.1
+
+
+
+2021-11-06 12:20:42.899165
+Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Score to beat: 0.08627
+Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
+Changing noise_level from 0.001 by adding -0.0005

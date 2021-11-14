@@ -59,7 +59,7 @@ def get_DNN(input_shape, output_length, n_layers, depth, lr):
     model.compile(loss='mse', optimizer=opt)
     return model
 
-def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr):
+def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr, dropout_level=0):
     model = keras.Sequential()
     
     # Add correct amount of LSTM layers
@@ -70,7 +70,7 @@ def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers,
         for i in range(lstm_layers -2):
             model.add(layers.LSTM(lstm_depth, activation=lrelu, return_sequences=True))
         model.add(layers.LSTM(lstm_depth, activation=lrelu, return_sequences=False))
-    #model.add(Dropout(0.2))
+    model.add(layers.Dropout(dropout_level))
 
     for i in range(dense_layers-1):
         model.add(layers.Dense(dense_depth, activation=lrelu))

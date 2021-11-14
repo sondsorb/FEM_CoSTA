@@ -18,9 +18,9 @@ if debug_mode:
     Ne = 5
     time_steps = 20
     if modelname=='LSTM':
-        nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5}
+        nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3}
     elif modelname=='CoSTA_LSTM':
-        nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5}
+        nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3, 'dropout_level':0.2}
     else:
         print('implement this first')
         quit()
@@ -29,14 +29,15 @@ if debug_mode:
     time_delta = 5
 else:
     Ne = 20
-    time_steps = 300
+    time_steps = 500
     if modelname=='LSTM' or modelname=='CoSTA_LSTM':
-        nnkwargs = {'lstm_layers':4, 'lstm_depth':50, 'dense_layers':1, 'dense_depth':50, 'input_period':10}
+        nnkwargs = {'lstm_layers': 2, 'lstm_depth': 62, 'dense_layers': 1, 'dense_depth': 75, 'input_period': 18, 'dropout_level': 0.2, 'noise_level': 0.0005}
+        #{'lstm_layers':2, 'lstm_depth':62, 'dense_layers':1, 'dense_depth':80, 'input_period':30, 'dropout_level':0.2, 'noise_level':1e-3}
     else:
         print('implement this first')
         quit()
-    trainkwargs = {'lr':8e-5, 'patience':[20,20], 'epochs':[1000,1000], 'min_epochs':[50,50]}
-    NoM = 3
+    trainkwargs = {'lr':8e-5, 'patience':[20,20], 'epochs':[2000,2000], 'min_epochs':[50,50]}
+    NoM = 10
     time_delta = 0.5
 
 Np = Ne+1
@@ -46,7 +47,7 @@ def output(text):
     print(text)
     with open(f'{modelname}tuner_history{"_db" if debug_mode else ""}.txt', 'a') as f:
         f.write(text)
-output(f'\n\n\n{datetime.datetime.now()}\nUsing training parameters: {trainkwargs}\n\n')
+output(f'\n\n\n{datetime.datetime.now()}\nUsing training parameters: time_steps={time_steps}, {trainkwargs}\n\n')
 
 
 def get_models(trainkwargs, nnkwargs):
@@ -78,8 +79,6 @@ s1 = solvers.Solvers(models=models1, sol=sol1, Ne=Ne, time_steps=time_steps)
 s0.plot = False
 s1.plot = False
 
-parameters = [key for key in nnkwargs]
-
 
 def get_score(nnkwargs, i, tag=''):
     models0 = get_models(trainkwargs, nnkwargs)
@@ -96,9 +95,17 @@ def get_score(nnkwargs, i, tag=''):
         ])
     return score
 
+
+parameters = [key for key in nnkwargs]
+#parameters = ['dropout_level', 'noise_level']
+startscore = None
+
 # tune:
 for tuning_iteration in range(500):
-    score = get_score(nnkwargs, tuning_iteration, '')
+    if tuning_iteration == 0 and startscore != None:
+        score = startscore
+    else:
+        score = get_score(nnkwargs, tuning_iteration, '')
     text = f'Score to beat: {score}\nConfigs now: {nnkwargs}\n'
     output(text)
 
@@ -106,10 +113,21 @@ for tuning_iteration in range(500):
     total_changes = 0
     for parameter in parameters:
         signs = [-1,1]
+        if nnkwargs[parameter] == 1: # minimum 1
+            signs = [1]
         np.random.shuffle(signs) # Start changing in a random direction
         for sign in signs:
             for changes in range(500):
-                change = sign * max(1, int(rate*nnkwargs[parameter]))
+                if parameter == 'dropout_level':
+                    change = sign * 0.05
+                    if change+nnkwargs[parameter] < 0:
+                        break
+                elif parameter == 'noise_level':
+                    change = nnkwargs[parameter] if sign>0 else -nnkwargs[parameter]/2
+                else:
+                    change = sign * max(1, int(rate*nnkwargs[parameter]))
+                    if change+nnkwargs[parameter] <= 0:
+                        break
 
                 text = f'Changing {parameter} from {nnkwargs[parameter]} by adding {change}\n'
                 output(text)
@@ -132,4 +150,4 @@ for tuning_iteration in range(500):
     if total_changes == 0:
         break
 
-output(f'tuner finished(!), after {tuning_iterations} iterations. Final score: {score}, found with params\n{nnkwargs}\n\n')
+output(f'tuner finished(!), after {tuning_iteration} iterations. Final score: {score}, found with params\n{nnkwargs}\n\n')
