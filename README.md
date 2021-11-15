@@ -4,9 +4,9 @@ This is the repo for my preproject, which is about combining neural networks wit
 
 
 ### Notation used in the code
-Np: number of nodes in the triangulization
-p: degree of basis polynomials, usually p=1 is used, i.e. linear interpolation
-Ne: number of elements (so N = MP+1)
+- Np: number of nodes in the triangulization
+- p: degree of basis polynomials, usually p=1 is used, i.e. linear interpolation
+- Ne: number of elements (so N = MP+1)
 
 
 ## File description
