@@ -248,3 +248,6 @@ new score 2.0415322408205704e+16
 Changing dense_layers from 1 by adding 1
 new score 0.15506975731334155
 Changing dropout_level from 0.2 by adding -0.05
+new score 5.900788035366682e+28
+Changing dropout_level from 0.2 by adding 0.05
+new score 0.12364423980106984

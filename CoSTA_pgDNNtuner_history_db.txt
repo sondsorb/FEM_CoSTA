@@ -1,0 +1,55 @@
+
+
+
+2021-11-14 23:41:25.131324
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8}
+Score to beat: 0.011320495931805955
+Changing n_layers_2 from 2 by adding -1
+new score 0.0169411085348328
+Changing n_layers_2 from 2 by adding 1
+new score 0.013233057515853335
+Changing max_depth from 20 by adding 5
+new score 0.013720348777097036
+Changing max_depth from 20 by adding -5
+new score 0.01077004284758532
+Changing max_depth from 15 by adding -3
+new score 0.013474356778984396
+Changing n_layers_1 from 4 by adding -1
+new score 0.016150722740238314
+Changing n_layers_1 from 4 by adding 1
+new score 0.013135876215557559
+Changing min_depth from 8 by adding -2
+new score 0.017780736042151295
+Changing min_depth from 8 by adding 2
+new score 0.013197785554225426
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 15, 'min_depth': 8}
+Score to beat: 0.011556142563076851
+Changing n_layers_2 from 2 by adding 1
+new score 0.013144753724003228
+Changing n_layers_2 from 2 by adding -1
+new score 0.012584295193658324
+Changing n_layers_1 from 4 by adding 1
+new score 0.01789616469723628
+Changing n_layers_1 from 4 by adding -1
+new score 0.015199669178909617
+Changing max_depth from 15 by adding 3
+new score 0.016307708962666832
+Changing max_depth from 15 by adding -3
+new score 0.013103280713219811
+Changing min_depth from 8 by adding 2
+new score 0.009738659279963436
+Changing min_depth from 10 by adding 2
+new score 0.023452619339963218
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 15, 'min_depth': 10}
+Score to beat: 0.013777365115556701
+Changing n_layers_1 from 4 by adding -1
+new score 0.01420216617602007
+Changing n_layers_1 from 4 by adding 1
+new score 0.013028697763138393
+Changing n_layers_1 from 5 by adding 1
+new score 0.014196377175408701
+Changing max_depth from 15 by adding 3
+new score 0.015929774348961683
+Changing max_depth from 15 by adding -3

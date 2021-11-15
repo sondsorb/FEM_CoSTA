@@ -9,10 +9,15 @@ from matplotlib import pyplot as plt
 import FEM
 
 COLORS = {
+        # b(lue) and (blac)k is reserved for FEM and exact
         'DNN':'y',
+        'pgDNN':'gold',
         'CoSTA_DNN':'g',
+        'CoSTA_pgDNN':'lime',
         'LSTM':'r',
+        'pgLSTM':'maroon',
         'CoSTA_LSTM':'c',
+        'CoSTA_pgLSTM':'m',
         }
 
 def lrelu(x):
@@ -55,6 +60,35 @@ def get_DNN(input_shape, output_length, n_layers, depth, lr):
                 ),
         ]
     )
+    opt = keras.optimizers.Adam(learning_rate=lr)
+    model.compile(loss='mse', optimizer=opt)
+    return model
+
+def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth, min_depth, n_layers_2, lr):
+    '''
+    Fully connected nerual network with 2 inputs, one at the start and one at a bottleneck
+    '''
+
+    inputs_1 = keras.Input(shape=input_shape_1)
+    x = inputs_1
+    for i in range(n_layers_1):
+        current_depth = max_depth * (min_depth/max_depth)**(i/(n_layers_1-1))
+        current_depth = int(round(current_depth))
+        x = layers.Dense(current_depth)(x)
+    model_1 = keras.Model(inputs_1, x)
+
+    inputs_2 = keras.Input(shape=input_shape_2)
+    x = inputs_2
+    model_2 = keras.Model(inputs_2, x)
+
+    combined_input = layers.concatenate([model_1.output, model_2.output])
+    x = combined_input 
+    for i in range(n_layers_2):
+        current_depth = min_depth * (output_length/min_depth )**((i+1)/n_layers_2)
+        current_depth = int(round(current_depth))
+        x = layers.Dense(current_depth)(x)
+
+    model = keras.Model(inputs=[model_1.input, model_2.input], outputs=x)
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
     return model
@@ -155,10 +189,8 @@ class DNN_solver:
         self.val_hist.extend(train_result.history['val_loss'])
 
 
-    def __call__(self, f, u_ex, alpha=None):
+    def __call__(self, f, u_ex, alpha):
         plot_steps=False
-        if alpha == None:
-            alpha = self.alpha_test[0]
         X=np.zeros((1,self.Np))
         u_NN = u_ex(self.tri, t=0)[1:-1]
         k=self.T/self.time_steps
@@ -182,6 +214,99 @@ class DNN_solver:
             plt.grid()
             #plt.legend()
             plt.show()
+        result = np.zeros((self.Np))
+        result[1:self.Np-1] = u_NN
+        result[0] = u_ex(x=0,t=self.T)
+        result[self.Np-1] = u_ex(x=1,t=self.T)
+        return result
+
+
+class pgDNN_solver:
+    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
+        self.name = 'pgDNN'
+        self.Np = Np
+        self.tri = tri
+        self.T = T
+        self.time_steps = time_steps
+        self.normalize =True#False
+        self.epochs = epochs
+        self.patience = patience
+        self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]]
+        self.noise_level = noise_level
+
+        self.model = get_pgDNN(input_shape_1=(self.Np,), input_shape_2=(2,), output_length = Np-2, **NNkwargs)
+
+    def __prep_data(self, data_1, data_2, set_norm_params):
+        data_1 = merge_first_dims(data_1)
+        data_2 = merge_first_dims(data_2)
+        P = np.random.permutation(data_1.shape[0])
+        data_1 = data_1[P,:]
+        X1 = data_1[:,:self.Np]
+        Y = data_1[:,self.Np:]
+        X2 = data_2[P,:]
+        if set_norm_params: # only training set, not val
+            self.mean = np.mean(X1) if self.normalize else 0
+            self.var = np.var(X1) if self.normalize else 1
+            self.Y_mean = np.mean(Y) if self.normalize else 0
+            self.Y_var = np.var(Y) if self.normalize else 1
+            self.X2_mean = np.mean(X2) if self.normalize else 0
+            self.X2_var = np.var(X2) if self.normalize else 1
+        X1 = X1-self.mean
+        X1 = X1/self.var**0.5
+        Y = Y-self.Y_mean
+        Y = Y/self.Y_var**0.5
+        X2 = X2-self.X2_mean
+        X2 = X2/self.X2_var**0.5
+        X1[:,1:-1] += np.random.rand(X1.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
+        X = [X1,X2]
+        return X,Y
+
+    def train(self, train_data, val_data):
+        X,Y = self.__prep_data(train_data['pnn'], train_data['extra_feats'], True)
+        X_val,Y_val = self.__prep_data(val_data['pnn'], val_data['extra_feats'], False)
+
+        train_kwargs = {
+                'batch_size':32,
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+
+        train_kwargs = {
+                'batch_size':32,
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+
+        # train for minimum 100 steps
+        train_result = self.model.fit(X, Y, epochs=self.min_epochs[1]-self.patience[1], **train_kwargs)
+        self.train_hist = train_result.history['loss']
+        self.val_hist = train_result.history['val_loss']
+
+        # train with patience 20
+        train_result = self.model.fit(X, Y,
+                epochs=self.epochs[1],
+                callbacks = [keras.callbacks.EarlyStopping(patience=self.patience[1])],
+                **train_kwargs)
+        self.train_hist.extend(train_result.history['loss'])
+        self.val_hist.extend(train_result.history['val_loss'])
+
+
+    def __call__(self, f, u_ex, alpha):
+        X1=np.zeros((self.Np))
+        u_NN = u_ex(self.tri, t=0)[1:-1]
+        k=self.T/self.time_steps
+        for t in range(self.time_steps):
+            u_prev = u_NN # save previous solution
+            X1[1:self.Np-1] = u_prev
+            X1[0]=u_ex(x=0,t=t*k)
+            X1[self.Np-1]=u_ex(x=1,t=t*k)
+            X2 = np.array([alpha,(t+1)*k])
+            X1 = (X1-self.mean)/self.var**0.5 # normalize NN input
+            X2 = (X2-self.X2_mean)/self.X2_var**0.5 # normalize NN input
+            model_input = [np.array([X1]), np.array([X2])]
+            u_NN = self.model(model_input)
+            u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
+            u_NN = u_NN + self.Y_mean
         result = np.zeros((self.Np))
         result[1:self.Np-1] = u_NN
         result[0] = u_ex(x=0,t=self.T)
@@ -263,7 +388,7 @@ class LSTM_solver:
         self.val_hist.extend(train_result.history['val_loss'])
 
 
-    def __call__(self, f, u_ex, alpha=None):
+    def __call__(self, f, u_ex, alpha):
         l=self.input_period
         X=np.zeros((1,l, self.Np))
         k=self.T/self.time_steps
@@ -349,7 +474,7 @@ class CoSTA_DNN_solver:
         self.train_hist.extend(train_result.history['loss'])
         self.val_hist.extend(train_result.history['val_loss'])
 
-    def __call__(self, f, u_ex, alpha=None):
+    def __call__(self, f, u_ex, alpha):
         X=np.zeros((1,self.Np))
 
         fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
@@ -362,6 +487,101 @@ class CoSTA_DNN_solver:
             X = (X-self.mean)/self.var**0.5
             correction = np.zeros(self.Np)
             correction[1:-1] = self.model(X)[0,:]
+            correction[1:-1] = correction[1:-1]*self.Y_var**0.5
+            correction[1:-1] = correction[1:-1] + self.Y_mean
+            fem_model.u_fem = u_prev
+            fem_model.time -= fem_model.k # set back time for correction
+            fem_model.step(correction=correction) # corrected step
+        return fem_model.u_fem
+
+
+class CoSTA_pgDNN_solver:
+    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
+        self.name = 'CoSTA_pgDNN'
+        self.Np = Np
+        self.p = p
+        self.T = T
+        self.tri = np.linspace(0,1,self.Np)
+        self.time_steps = time_steps
+        self.normalize =True#False
+        self.epochs = epochs
+        self.patience = patience
+        self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
+        self.noise_level = noise_level
+
+        self.model = get_pgDNN(input_shape_1=(self.Np,), input_shape_2=(2,), output_length = Np-2, **NNkwargs)
+
+    def __prep_data(self, data_1, data_2, set_norm_params):
+        data_1 = merge_first_dims(data_1)
+        data_2 = merge_first_dims(data_2)
+        P = np.random.permutation(data_1.shape[0])
+        data_1 = data_1[P,:]
+        X1 = data_1[:,:self.Np]
+        Y = data_1[:,self.Np:]
+        X2 = data_2[P,:]
+        if set_norm_params: # only training set, not val
+            self.mean = np.mean(X1) if self.normalize else 0
+            self.var = np.var(X1) if self.normalize else 1
+            self.Y_mean = np.mean(Y) if self.normalize else 0
+            self.Y_var = np.var(Y) if self.normalize else 1
+            self.X2_mean = np.mean(X2) if self.normalize else 0
+            self.X2_var = np.var(X2) if self.normalize else 1
+        X1 = X1-self.mean
+        X1 = X1/self.var**0.5
+        Y = Y-self.Y_mean
+        Y = Y/self.Y_var**0.5
+        X2 = X2-self.X2_mean
+        X2 = X2/self.X2_var**0.5
+        X1[:,1:-1] += np.random.rand(X1.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
+        X = [X1,X2]
+        return X,Y
+
+    def train(self, train_data, val_data):
+        X,Y = self.__prep_data(train_data['ham'], train_data['extra_feats'], True)
+        X_val,Y_val = self.__prep_data(val_data['ham'], val_data['extra_feats'], False)
+
+        train_kwargs = {
+                'batch_size':32,
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+
+        train_kwargs = {
+                'batch_size':32,
+                'validation_data':(X_val, Y_val),
+                'verbose':0,
+                }
+
+        # train for minimum 100 steps
+        train_result = self.model.fit(X, Y, epochs=self.min_epochs[0]-self.patience[0], **train_kwargs)
+        self.train_hist = train_result.history['loss']
+        self.val_hist = train_result.history['val_loss']
+
+        # train with patience 20
+        train_result = self.model.fit(X, Y,
+                epochs=self.epochs[0],
+                callbacks = [keras.callbacks.EarlyStopping(patience=self.patience[0])],
+                **train_kwargs)
+        self.train_hist.extend(train_result.history['loss'])
+        self.val_hist.extend(train_result.history['val_loss'])
+
+
+    def __call__(self, f, u_ex, alpha):
+        X1=np.zeros((self.Np))
+
+        fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
+        fem_model.u_fem =fem_model.u_ex(fem_model.tri, t=fem_model.time)
+        for t in range(self.time_steps):
+            u_prev = fem_model.u_fem # save previous solution
+            fem_model.step() # first, uncorrected, step
+            fem_step = fem_model.u_fem
+            X1[:self.Np] = fem_step
+            X1 = (X1-self.mean)/self.var**0.5
+            X2 = np.array([alpha,fem_model.time])
+            X2 = (X2-self.X2_mean)/self.X2_var**0.5
+            model_input = [np.array([X1]), np.array([X2])]
+            correction = np.zeros(self.Np)
+            correction[1:-1] = self.model(model_input)[0,:]
             correction[1:-1] = correction[1:-1]*self.Y_var**0.5
             correction[1:-1] = correction[1:-1] + self.Y_mean
             fem_model.u_fem = u_prev
@@ -444,7 +664,7 @@ class CoSTA_LSTM_solver:
         self.train_hist.extend(train_result.history['loss'])
         self.val_hist.extend(train_result.history['val_loss'])
 
-    def __call__(self, f, u_ex, alpha=None):
+    def __call__(self, f, u_ex, alpha):
         l=self.input_period
         X=np.zeros((1,l, self.Np))
         k=self.T/self.time_steps
@@ -486,7 +706,7 @@ class CoSTA_LSTM_solver:
 ###   Solver class compares the different solvers defined above   ###
 #####################################################################
 class Solvers:
-    def __init__(self, sol, models=None, modelnames=None, Ne=10, time_steps=20, p=1, DNNkwargs={}, LSTMkwargs={}):
+    def __init__(self, sol, models=None, modelnames=None, Ne=10, time_steps=20, p=1, NNkwargs={}):
         '''
         either models or modelnames must be specified, not both
         models - list of models
@@ -514,13 +734,19 @@ class Solvers:
             for modelname in modelnames:
                 for i in range(modelnames[modelname]):
                     if modelname == 'DNN':
-                        self.models.append(DNN_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **DNNkwargs))
-                    if modelname == 'LSTM':
-                        self.models.append(LSTM_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **LSTMkwargs))
-                    if modelname == 'CoSTA_DNN':
-                        self.models.append(CoSTA_DNN_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps, **DNNkwargs))
-                    if modelname == 'CoSTA_LSTM':
-                        self.models.append(CoSTA_LSTM_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps, **LSTMkwargs))
+                        self.models.append(DNN_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **(NNkwargs[modelname])))
+                    elif modelname == 'pgDNN':
+                        self.models.append(pgDNN_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **(NNkwargs[modelname])))
+                    elif modelname == 'LSTM':
+                        self.models.append(LSTM_solver(T=self.T, tri=self.tri, time_steps=time_steps, Np=self.Np, **(NNkwargs[modelname])))
+                    elif modelname == 'CoSTA_DNN':
+                        self.models.append(CoSTA_DNN_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps,**(NNkwargs[modelname])))
+                    elif modelname == 'CoSTA_pgDNN':
+                        self.models.append(CoSTA_pgDNN_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps,**(NNkwargs[modelname])))
+                    elif modelname == 'CoSTA_LSTM':
+                        self.models.append(CoSTA_LSTM_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps, **(NNkwargs[modelname])))
+                    else:
+                        print(f'WARNING!!!! model named {modelname} not implemented')
 
         if models != None:
             self.models = models

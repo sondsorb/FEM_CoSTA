@@ -7,7 +7,8 @@ import numpy as np
 # Configs for tuning:
 debug_mode = False
 #modelname = 'LSTM'
-modelname = 'CoSTA_LSTM'
+#modelname = 'CoSTA_LSTM'
+modelname = 'CoSTA_pgDNN'
 NoM = 3
 T = 5
 rate = 0.25 # Rate to change parameters
@@ -21,6 +22,8 @@ if debug_mode:
         nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3}
     elif modelname=='CoSTA_LSTM':
         nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3, 'dropout_level':0.2}
+    elif modelname=='CoSTA_pgDNN':
+        nnkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':20,'min_depth':8}
     else:
         print('implement this first')
         quit()
@@ -33,6 +36,8 @@ else:
     if modelname=='LSTM' or modelname=='CoSTA_LSTM':
         nnkwargs = {'lstm_layers': 2, 'lstm_depth': 62, 'dense_layers': 1, 'dense_depth': 75, 'input_period': 18, 'dropout_level': 0.2, 'noise_level': 0.0005}
         #{'lstm_layers':2, 'lstm_depth':62, 'dense_layers':1, 'dense_depth':80, 'input_period':30, 'dropout_level':0.2, 'noise_level':1e-3}
+    elif modelname=='CoSTA_pgDNN':
+        nnkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':80,'min_depth':14}
     else:
         print('implement this first')
         quit()
@@ -60,8 +65,13 @@ def get_models(trainkwargs, nnkwargs):
             models.append(solvers.LSTM_solver(T=T, tri=tri, time_steps=time_steps, Np=Np, **kwargs))
         #if modelname == 'CoSTA_DNN':
         #    models.append(solvers.CoSTA_DNN_solver(T=T, Np=Np, tri=tri, time_steps=time_steps, **DNNkwargs))
-        if modelname == 'CoSTA_LSTM':
+        elif modelname == 'CoSTA_LSTM':
             models.append(solvers.CoSTA_LSTM_solver(p=p,T=T, Np=Np, tri=tri, time_steps=time_steps, **kwargs))
+        elif modelname == 'CoSTA_pgDNN':
+            models.append(solvers.CoSTA_pgDNN_solver(p=p,T=T, Np=Np, tri=tri, time_steps=time_steps, **kwargs))
+        else:
+            print('implement this first')
+            quit()
     return models
 
 
@@ -85,9 +95,9 @@ def get_score(nnkwargs, i, tag=''):
     models1 = get_models(trainkwargs, nnkwargs)
     s0.models = models0
     s1.models = models1
-    figname = f'../preproject/1d_heat_figures/tunetraining/{i}_{tag}_sol0.pdf'
+    figname = f'../preproject/1d_heat_figures/tunetraining/{modelname}_{i}_{tag}_sol0.pdf'
     s0.train(figname)
-    figname = f'../preproject/1d_heat_figures/tunetraining/{i}_{tag}_sol1.pdf'
+    figname = f'../preproject/1d_heat_figures/tunetraining/{modelname}_{i}_{tag}_sol1.pdf'
     s1.train(figname)
     score = np.mean( [
         *s0.test()[1][modelname],
@@ -102,11 +112,13 @@ startscore = None
 
 # tune:
 for tuning_iteration in range(500):
+    text = f'Starting new tuning iteration. Configs now: {nnkwargs}\n'
+    output(text)
     if tuning_iteration == 0 and startscore != None:
         score = startscore
     else:
         score = get_score(nnkwargs, tuning_iteration, '')
-    text = f'Score to beat: {score}\nConfigs now: {nnkwargs}\n'
+    text = f'Score to beat: {score}\n'
     output(text)
 
     np.random.shuffle(parameters) # start with a random parameter

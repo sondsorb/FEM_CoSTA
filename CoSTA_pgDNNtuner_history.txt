@@ -1,0 +1,111 @@
+
+
+
+2021-11-14 23:40:49.319552
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+
+
+
+2021-11-14 23:47:23.965688
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 80, 'min_depth': 14}
+Score to beat: 0.026962206882213024
+Changing min_depth from 14 by adding 3
+new score 0.027402267910234028
+Changing min_depth from 14 by adding -3
+new score 0.026509879810606478
+Changing min_depth from 11 by adding -2
+new score 0.023327187812617535
+Changing min_depth from 9 by adding -2
+new score 0.028077214654076012
+Changing n_layers_1 from 4 by adding 1
+new score 0.026925177814513035
+Changing n_layers_1 from 4 by adding -1
+new score 0.026785771909016286
+Changing n_layers_2 from 2 by adding -1
+new score 0.028292020414202097
+Changing n_layers_2 from 2 by adding 1
+new score 0.02852509149074356
+Changing max_depth from 80 by adding -20
+new score 0.02381479589459395
+Changing max_depth from 80 by adding 20
+new score 0.02419823603855417
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 80, 'min_depth': 9}
+Score to beat: 0.02806473332424883
+Changing max_depth from 80 by adding 20
+new score 0.03183848295119445
+Changing max_depth from 80 by adding -20
+new score 0.028412331397468127
+Changing min_depth from 9 by adding 2
+new score 0.02998683334945685
+Changing min_depth from 9 by adding -2
+new score 0.029389972630769035
+Changing n_layers_2 from 2 by adding 1
+new score 0.02363413939341779
+Changing n_layers_2 from 3 by adding 1
+new score 0.023126185132839625
+Changing n_layers_2 from 4 by adding 1
+new score 0.03324074827225898
+Changing n_layers_1 from 4 by adding -1
+new score 0.029442897339262353
+Changing n_layers_1 from 4 by adding 1
+new score 0.02362670215693299
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 4, 'max_depth': 80, 'min_depth': 9}
+Score to beat: 0.030345123323064764
+Changing max_depth from 80 by adding 20
+new score 0.029101198804005822
+Changing max_depth from 100 by adding 25
+new score 0.031233408238094514
+Changing min_depth from 9 by adding 2
+new score 0.030964959663970636
+Changing min_depth from 9 by adding -2
+new score 0.028546246378603764
+Changing min_depth from 7 by adding -1
+new score 0.02044969401654847
+Changing min_depth from 6 by adding -1
+new score 0.027007610411305682
+Changing n_layers_2 from 4 by adding 1
+new score 0.023274333299921002
+Changing n_layers_2 from 4 by adding -1
+new score 0.024988424892932414
+Changing n_layers_1 from 4 by adding 1
+new score 0.02785097057759834
+Changing n_layers_1 from 4 by adding -1
+new score 0.019747561376782123
+Changing n_layers_1 from 3 by adding -1
+new score 0.026668523909120324
+Starting new tuning iteration. Configs now: {'n_layers_1': 3, 'n_layers_2': 4, 'max_depth': 100, 'min_depth': 6}
+Score to beat: 0.026186758957468255
+Changing max_depth from 100 by adding 25
+new score 0.025348374942294926
+Changing max_depth from 125 by adding 31
+new score 0.02893542601801456
+Changing n_layers_2 from 4 by adding 1
+new score 0.02148871751206812
+Changing n_layers_2 from 5 by adding 1
+new score 0.02383238928595261
+Changing min_depth from 6 by adding -1
+new score 0.018333797282656696
+Changing min_depth from 5 by adding -1
+new score 0.024161115725313702
+Changing n_layers_1 from 3 by adding 1
+new score 0.027581951221240138
+Changing n_layers_1 from 3 by adding -1
+new score 0.02991683498205864
+Starting new tuning iteration. Configs now: {'n_layers_1': 3, 'n_layers_2': 5, 'max_depth': 125, 'min_depth': 5}
+Score to beat: 0.02921465548889545
+Changing n_layers_2 from 5 by adding -1
+new score 0.019176684281314336
+Changing n_layers_2 from 4 by adding -1
+new score 0.024216745083672258
+Changing max_depth from 125 by adding -31
+new score 0.02688073960864521
+Changing max_depth from 125 by adding 31
+new score 0.029063849041359925
+Changing min_depth from 5 by adding -1
+new score 0.02403278863242518
+Changing min_depth from 5 by adding 1
+new score 0.028559955541968614
+Changing n_layers_1 from 3 by adding 1
