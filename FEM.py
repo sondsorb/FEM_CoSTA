@@ -236,7 +236,7 @@ class Heat(Fem_1d):
         self.u_fem = np.linalg.solve(self.MA, M@u_prev+self.F*self.k+correction) #Solve system
 
 
-    def solve(self, time_steps, u0=None, g=None, T=1):
+    def solve(self, time_steps, u0=None, g=None, T=1, callback=None):
         '''find u at t=T using backward euler'''
         assert self.time == 0 # this is only supposed to run on unsolved systems
         k = T/time_steps
@@ -248,3 +248,5 @@ class Heat(Fem_1d):
             self.u_fem = self.u_ex(self.tri, t=0)
         for t in range(time_steps):
             self.step(g)
+            if callback!=None:
+                callback(t,self.u_fem)

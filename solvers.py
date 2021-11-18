@@ -9,8 +9,9 @@ from matplotlib import pyplot as plt
 import FEM
 
 COLORS = {
-        # b(lue) and (blac)k is reserved for FEM and exact
-        'DNN':'y',
+        # (blac)k is reserved for exact solution
+        'FEM':'b',
+        'DNN':'darkorange',
         'pgDNN':'gold',
         'CoSTA_DNN':'g',
         'CoSTA_pgDNN':'lime',
@@ -189,7 +190,7 @@ class DNN_solver:
         self.val_hist.extend(train_result.history['val_loss'])
 
 
-    def __call__(self, f, u_ex, alpha):
+    def __call__(self, f, u_ex, alpha, callback=None):
         plot_steps=False
         X=np.zeros((1,self.Np))
         u_NN = u_ex(self.tri, t=0)[1:-1]
@@ -210,6 +211,8 @@ class DNN_solver:
             u_NN = self.model(X)
             u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
             u_NN = u_NN + self.Y_mean
+            if callback!=None:
+                callback((t+1)*k,u_NN)
         if plot_steps:
             plt.grid()
             #plt.legend()
@@ -291,7 +294,7 @@ class pgDNN_solver:
         self.val_hist.extend(train_result.history['val_loss'])
 
 
-    def __call__(self, f, u_ex, alpha):
+    def __call__(self, f, u_ex, alpha, callback=None):
         X1=np.zeros((self.Np))
         u_NN = u_ex(self.tri, t=0)[1:-1]
         k=self.T/self.time_steps
@@ -307,6 +310,8 @@ class pgDNN_solver:
             u_NN = self.model(model_input)
             u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
             u_NN = u_NN + self.Y_mean
+            if callback!=None:
+                callback((t+1)*k,u_NN)
         result = np.zeros((self.Np))
         result[1:self.Np-1] = u_NN
         result[0] = u_ex(x=0,t=self.T)
@@ -388,7 +393,7 @@ class LSTM_solver:
         self.val_hist.extend(train_result.history['val_loss'])
 
 
-    def __call__(self, f, u_ex, alpha):
+    def __call__(self, f, u_ex, alpha, callback=None):
         l=self.input_period
         X=np.zeros((1,l, self.Np))
         k=self.T/self.time_steps
@@ -406,6 +411,8 @@ class LSTM_solver:
             u_NN = self.model(X)
             u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
             u_NN = u_NN + self.Y_mean
+            if callback!=None:
+                callback((t+1)*k,u_NN)
         result = np.zeros((self.Np))
         result[1:self.Np-1] = u_NN
         result[0] = u_ex(x=0,t=self.T)
@@ -474,7 +481,7 @@ class CoSTA_DNN_solver:
         self.train_hist.extend(train_result.history['loss'])
         self.val_hist.extend(train_result.history['val_loss'])
 
-    def __call__(self, f, u_ex, alpha):
+    def __call__(self, f, u_ex, alpha, callback=None):
         X=np.zeros((1,self.Np))
 
         fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
@@ -492,6 +499,8 @@ class CoSTA_DNN_solver:
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
+            if callback!=None:
+                callback(fem_model.time, fem_model.u_fem)
         return fem_model.u_fem
 
 
@@ -566,7 +575,7 @@ class CoSTA_pgDNN_solver:
         self.val_hist.extend(train_result.history['val_loss'])
 
 
-    def __call__(self, f, u_ex, alpha):
+    def __call__(self, f, u_ex, alpha, callback=None):
         X1=np.zeros((self.Np))
 
         fem_model = FEM.Heat(self.tri, f, self.p, u_ex, k=self.T/self.time_steps)
@@ -587,6 +596,8 @@ class CoSTA_pgDNN_solver:
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
+            if callback!=None:
+                callback(fem_model.time, fem_model.u_fem)
         return fem_model.u_fem
 
 
@@ -664,7 +675,7 @@ class CoSTA_LSTM_solver:
         self.train_hist.extend(train_result.history['loss'])
         self.val_hist.extend(train_result.history['val_loss'])
 
-    def __call__(self, f, u_ex, alpha):
+    def __call__(self, f, u_ex, alpha, callback=None):
         l=self.input_period
         X=np.zeros((1,l, self.Np))
         k=self.T/self.time_steps
@@ -699,6 +710,8 @@ class CoSTA_LSTM_solver:
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
+            if callback!=None:
+                callback(fem_model.time, fem_model.u_fem)
         return fem_model.u_fem
 
 
@@ -907,14 +920,22 @@ class Solvers:
         # prepare plotting
         if type(statplot) == int:
             statplot = len(self.models) > statplot
-        fig, axs = plt.subplots(1,len(alphas))
+        fig, axs = plt.subplots(1,len(alphas), figsize=(12,9))
 
+        L2_devs={}
         for i, alpha in enumerate(alphas):
             self.sol.set_alpha(alpha)
 
+            # Define callback function to store L2 error development
+            fem_frame = FEM.Fem_1d(self.tri[1:-1], self.sol.f, self.p, self.sol.u)
+            def relative_L2_callback(t, u_approx):
+                fem_frame.u_fem = u_approx[1:-1] if len(u_approx)==self.Np else u_approx[0,:]
+                self.L2_development.append( fem_frame.relative_L2() )
+
             # Solve with FEM
+            self.L2_development = []
             fem_model = FEM.Heat(self.tri, self.sol.f, self.p, self.sol.u, k=self.T/self.time_steps)
-            fem_model.solve(self.time_steps, T = self.T)
+            fem_model.solve(self.time_steps, T = self.T, callback = relative_L2_callback)
             tri_fine = np.linspace(0,1,self.Ne*self.p*8+1)
             axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'b', label='fem')
 
@@ -924,14 +945,18 @@ class Solvers:
             L2_scores = {'FEM' : [fem_model.relative_L2()]}
             def rel_l2() : return np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
             l2_scores = {'FEM' : [rel_l2()]}
+            L2_devs[alpha]= {'FEM' : [self.L2_development]}
 
             for model in self.models:
-                fem_model.u_fem = model(self.sol.f,self.sol.u,alpha) # store in fem_model for easy use of relative_L2 and soltion functoins
+
+                self.L2_development = []
+                fem_model.u_fem = model(self.sol.f,self.sol.u,alpha,callback=relative_L2_callback) # store in fem_model for easy use of relative_L2 and soltion functoins
                 if prev_name != model.name:
                     prev_name = model.name
                     graphs[model.name] = []
                     L2_scores[model.name] = []
                     l2_scores[model.name] = []
+                    L2_devs[alpha][model.name] = []
                     if not statplot:
                         axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name], label=model.name)
                 else:
@@ -940,6 +965,7 @@ class Solvers:
                 graphs[model.name].append(fem_model.solution(tri_fine))
                 L2_scores[model.name].append(fem_model.relative_L2())
                 l2_scores[model.name].append(rel_l2())
+                L2_devs[alpha][model.name].append(self.L2_development)
 
             if statplot:
                 for name in graphs:
@@ -958,5 +984,33 @@ class Solvers:
             plt.show()
         else:
             plt.close()
+
+        # Plot L2 development:
+        if statplot: # not implemented otherwise
+            fig, axs = plt.subplots(1,len(alphas), figsize=(12,9))
+            for i, alpha in enumerate(alphas):
+                axs[i].set_yscale('log')
+                for name in L2_devs[alpha]:
+                    curr_devs = np.array(L2_devs[alpha][name])
+                    mean = np.mean(curr_devs, axis=0)
+                    if name!='FEM': # TODO use length instead, to open for nonstatplot
+                        axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
+                        std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
+                        axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)
+                    else:
+                        axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name], label=name)
+
+                axs[i].grid()
+                axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+
+            if figname != None:
+                plt.savefig(figname[:-4]+'_devs'+'.pdf') # TODO do this in a cleaner way
+            if self.plot:
+                plt.show()
+            else:
+                plt.close()
+
+
+
         print('scores (L2, l2):',L2_scores, l2_scores)
         return L2_scores, l2_scores
