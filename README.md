@@ -23,7 +23,7 @@ This is the repo for my preproject, which is about combining neural networks wit
 
  - replot.sh : Shell script for running testing.py in several configurations (to create plots of solutions)
 
- - solvers.py : Deep learning methods for solving the heat equation. Methods are DNN, LSTM, and CoSTAs with those networks. The class "Solvers" is used for training and testing these models.
+ - solvers.py : Deep learning methods for solving the heat equation. Methods are fcNN, pgNN, LSTM, and CoSTAs with those networks. The class "Solvers" is used for training and testing these models.
 
  - testing.ipynb : Notebook version of testing.py
 
