@@ -249,4 +249,4 @@ class Heat(Fem_1d):
         for t in range(time_steps):
             self.step(g)
             if callback!=None:
-                callback(t,self.u_fem)
+                callback(self.time,self.u_fem)

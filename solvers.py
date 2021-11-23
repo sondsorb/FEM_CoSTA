@@ -160,8 +160,10 @@ class DNN_solver:
         X[:,1:-1] += np.random.rand(X.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
         return X,Y
 
-    def train(self, train_data, val_data):
+    def train(self, train_data, val_data, weights_loaded=False):
         X,Y = self.__prep_data(train_data['pnn'], True)
+        if weights_loaded:
+            return
         X_val,Y_val = self.__prep_data(val_data['pnn'], False)
 
         train_kwargs = {
@@ -264,8 +266,10 @@ class pgDNN_solver:
         X = [X1,X2]
         return X,Y
 
-    def train(self, train_data, val_data):
+    def train(self, train_data, val_data, weights_loaded=False):
         X,Y = self.__prep_data(train_data['pnn'], train_data['extra_feats'], True)
+        if weights_loaded:
+            return
         X_val,Y_val = self.__prep_data(val_data['pnn'], val_data['extra_feats'], False)
 
         train_kwargs = {
@@ -363,8 +367,10 @@ class LSTM_solver:
         X[:,:,1:-1] += np.random.rand(X.shape[0],l,self.Np-2)*self.noise_level-self.noise_level/2
         return X,Y
 
-    def train(self, train_data, val_data):
+    def train(self, train_data, val_data, weights_loaded=False):
         X,Y = self.__prep_data(train_data['pnn'], True)
+        if weights_loaded:
+            return
         X_val,Y_val = self.__prep_data(val_data['pnn'], False)
 
         train_kwargs = {
@@ -452,8 +458,10 @@ class CoSTA_DNN_solver:
         X[:,1:-1] += np.random.rand(X.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
         return X,Y
 
-    def train(self, train_data, val_data):
+    def train(self, train_data, val_data, weights_loaded=False):
         X,Y = self.__prep_data(train_data['ham'], True)
+        if weights_loaded:
+            return
         X_val,Y_val = self.__prep_data(val_data['ham'], False)
 
         train_kwargs = {
@@ -545,8 +553,10 @@ class CoSTA_pgDNN_solver:
         X = [X1,X2]
         return X,Y
 
-    def train(self, train_data, val_data):
+    def train(self, train_data, val_data, weights_loaded=False):
         X,Y = self.__prep_data(train_data['ham'], train_data['extra_feats'], True)
+        if weights_loaded:
+            return
         X_val,Y_val = self.__prep_data(val_data['ham'], val_data['extra_feats'], False)
 
         train_kwargs = {
@@ -646,8 +656,10 @@ class CoSTA_LSTM_solver:
         X[:,:,1:-1] += np.random.rand(X.shape[0],l,self.Np-2)*self.noise_level-self.noise_level/2
         return X,Y
 
-    def train(self, train_data, val_data):
+    def train(self, train_data, val_data, weights_loaded=False):
         X,Y = self.__prep_data(train_data['ham'], True)
+        if weights_loaded:
+            return
         X_val,Y_val = self.__prep_data(val_data['ham'], False)
 
         train_kwargs = {
@@ -808,8 +820,13 @@ class Solvers:
             self.test_data = self.__data_set(self.alpha_val) # for plotting learnt source term only !
         print(f'\nTime making data set: {datetime.datetime.now()-start_time}')
 
+    def load_weights(self, model_folder):
+        for j, model in enumerate(self.models):
+            model.model.load_weights(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}')
+            model.train(self.train_data, self.val_data, True) # For setting mean/var, it wont fit the model
+        print('model weights loaded')
 
-    def train(self, figname=None):
+    def train(self, model_folder=None, figname=None):
         start_time = datetime.datetime.now()
 
         # prepare plotting
@@ -819,11 +836,13 @@ class Solvers:
         prev_name = ''
         i=-1
 
-        for model in self.models:
+        for j, model in enumerate(self.models):
 
             # train
             model_start_time = datetime.datetime.now()
             model.train(self.train_data, self.val_data)
+            if model_folder != None:
+                model.model.save_weights(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}')
             print(f'\nTime training model "{model.name}": {datetime.datetime.now()-model_start_time}')
 
             # plot history
@@ -908,19 +927,21 @@ class Solvers:
         #        plt.show()
 
 
-    def test(self, interpol = True, figname=None, statplot = 5):
+    def test(self, interpol = True, figname=None, statplot = 5, ignore_models=[]):
         '''
         interpol - (bool) use interpolating or extrapolating alpha set
         figname - (string or None) filename to save figure to. Note saved if None.
         statplot - (bool or int) if plots should be of mean and variance (instead of every solution). If int, then statplot is set to len(models)>statplot
+        ignore_models - (list of str) names of models not to include in plots. FEM always included.
         '''
         start_time = datetime.datetime.now()
         alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
 
         # prepare plotting
+        figsize = (6,4)
         if type(statplot) == int:
             statplot = len(self.models) > statplot
-        fig, axs = plt.subplots(1,len(alphas), figsize=(12,9))
+        fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
 
         L2_devs={}
         for i, alpha in enumerate(alphas):
@@ -930,7 +951,10 @@ class Solvers:
             fem_frame = FEM.Fem_1d(self.tri[1:-1], self.sol.f, self.p, self.sol.u)
             def relative_L2_callback(t, u_approx):
                 fem_frame.u_fem = u_approx[1:-1] if len(u_approx)==self.Np else u_approx[0,:]
-                self.L2_development.append( fem_frame.relative_L2() )
+                #self.L2_development.append( fem_frame.relative_L2() )
+
+                # Drop L2, use l2 instead (for now..?) TODO fix this mess
+                self.L2_development.append(np.sqrt(np.mean((fem_frame.u_fem-fem_frame.u_ex(self.tri[1:-1],t))**2)) / np.sqrt(np.mean(fem_frame.u_ex(self.tri[1:-1],t)**2)))
 
             # Solve with FEM
             self.L2_development = []
@@ -946,26 +970,27 @@ class Solvers:
             def rel_l2() : return np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.tri,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.tri,self.T)**2))
             l2_scores = {'FEM' : [rel_l2()]}
             L2_devs[alpha]= {'FEM' : [self.L2_development]}
-
+            
             for model in self.models:
+                if not model.name in ignore_models:
 
-                self.L2_development = []
-                fem_model.u_fem = model(self.sol.f,self.sol.u,alpha,callback=relative_L2_callback) # store in fem_model for easy use of relative_L2 and soltion functoins
-                if prev_name != model.name:
-                    prev_name = model.name
-                    graphs[model.name] = []
-                    L2_scores[model.name] = []
-                    l2_scores[model.name] = []
-                    L2_devs[alpha][model.name] = []
-                    if not statplot:
-                        axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name], label=model.name)
-                else:
-                    if not statplot:
-                        axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name])
-                graphs[model.name].append(fem_model.solution(tri_fine))
-                L2_scores[model.name].append(fem_model.relative_L2())
-                l2_scores[model.name].append(rel_l2())
-                L2_devs[alpha][model.name].append(self.L2_development)
+                    self.L2_development = []
+                    fem_model.u_fem = model(self.sol.f,self.sol.u,alpha,callback=relative_L2_callback) # store in fem_model for easy use of relative_L2 and soltion functoins
+                    if prev_name != model.name:
+                        prev_name = model.name
+                        graphs[model.name] = []
+                        L2_scores[model.name] = []
+                        l2_scores[model.name] = []
+                        L2_devs[alpha][model.name] = []
+                        if not statplot:
+                            axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name], label=model.name)
+                    else:
+                        if not statplot:
+                            axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name])
+                    graphs[model.name].append(fem_model.solution(tri_fine))
+                    L2_scores[model.name].append(fem_model.relative_L2())
+                    l2_scores[model.name].append(rel_l2())
+                    L2_devs[alpha][model.name].append(self.L2_development)
 
             if statplot:
                 for name in graphs:
@@ -978,6 +1003,7 @@ class Solvers:
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
+        plt.tight_layout()
         if figname != None:
             plt.savefig(figname)
         if self.plot:
@@ -987,7 +1013,7 @@ class Solvers:
 
         # Plot L2 development:
         if statplot: # not implemented otherwise
-            fig, axs = plt.subplots(1,len(alphas), figsize=(12,9))
+            fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
             for i, alpha in enumerate(alphas):
                 axs[i].set_yscale('log')
                 for name in L2_devs[alpha]:
@@ -1003,6 +1029,7 @@ class Solvers:
                 axs[i].grid()
                 axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
+            plt.tight_layout()
             if figname != None:
                 plt.savefig(figname[:-4]+'_devs'+'.pdf') # TODO do this in a cleaner way
             if self.plot:
@@ -1012,5 +1039,5 @@ class Solvers:
 
 
 
-        print('scores (L2, l2):',L2_scores, l2_scores)
+        print('scores for last alpha (L2, l2):',L2_scores, l2_scores) # TODO? print earlier for both alphas
         return L2_scores, l2_scores
