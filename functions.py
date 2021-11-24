@@ -26,7 +26,7 @@ SBMFACT = [
     ]
 
 # For tuning:
-SMBFACT_TUNING = [
+SBMFACT_TUNING = [
             (
                 lambda x,t,alpha,time_delta: 0.5/(t+alpha+1+time_delta)**0.5-84*x*x-42*x+28,
                 lambda x,t,alpha,time_delta: (t+alpha+1+time_delta)**0.5 + 7*x*x*(x-1)*(x+2)

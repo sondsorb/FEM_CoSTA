@@ -47,7 +47,7 @@ def set_args(mode=mode):
         DNNkwargs = {'n_layers':6,'depth':80, 'lr':1e-5, 'patience':[20,20]}
         pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'max_depth':125,'min_depth':5,'lr':1e-5,'patience':[20,20]}
         LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20]}
-        NoM=4
+        NoM=2#4
         time_delta = 0
 
 set_args()
@@ -72,7 +72,7 @@ print(f'Using p={p}')
 
 modelnames = {
         'DNN' : NoM,
-        'pgDNN' : NoM,
+        #'pgDNN' : NoM,
         #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
         'CoSTA_pgDNN' : NoM,
@@ -96,9 +96,9 @@ for sol_index in [3,4,1,2]:
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol_index}_p{p}{extra_tag}.pdf'
     model_folder = f'../preproject/saved_models/{mode}/'
     figname = None
-    model.plot=False
-    #model.train(figname=figname, model_folder = model_folder)
-    model.load_weights(model_folder)
+    model.plot=False#True
+    model.train(figname=figname, model_folder = model_folder)
+    #model.load_weights(model_folder)
 
     #model.plot=True
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}{extra_tag}.pdf'

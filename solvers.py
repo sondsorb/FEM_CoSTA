@@ -5,6 +5,7 @@ import datetime
 from tensorflow import keras
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt
+import json
 
 import FEM
 
@@ -129,7 +130,7 @@ def merge_first_dims(data):
 
 
 class DNN_solver:
-    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
+    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'DNN'
         self.Np = Np
         self.tri = tri
@@ -227,7 +228,7 @@ class DNN_solver:
 
 
 class pgDNN_solver:
-    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
+    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'pgDNN'
         self.Np = Np
         self.tri = tri
@@ -324,7 +325,7 @@ class pgDNN_solver:
 
 
 class LSTM_solver:
-    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, input_period=10, **NNkwargs):
+    def __init__(self, Np, tri, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, input_period=10, **NNkwargs):
         self.name = 'LSTM'
         self.Np = Np
         self.tri = tri
@@ -426,7 +427,7 @@ class LSTM_solver:
         return result
 
 class CoSTA_DNN_solver:
-    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
+    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'CoSTA_DNN'
         self.Np = Np
         self.p = p
@@ -513,7 +514,7 @@ class CoSTA_DNN_solver:
 
 
 class CoSTA_pgDNN_solver:
-    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, **NNkwargs):
+    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'CoSTA_pgDNN'
         self.Np = Np
         self.p = p
@@ -612,7 +613,7 @@ class CoSTA_pgDNN_solver:
 
 
 class CoSTA_LSTM_solver:
-    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[50,200], noise_level=0, input_period=10, **NNkwargs):
+    def __init__(self, Np, T, p, tri, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, input_period=10, **NNkwargs):
         self.name = 'CoSTA_LSTM'
         self.Np = Np
         self.p = p
@@ -768,6 +769,8 @@ class Solvers:
                         self.models.append(CoSTA_DNN_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps,**(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_pgDNN':
                         self.models.append(CoSTA_pgDNN_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps,**(NNkwargs[modelname])))
+                        #self.models[-1].model.summary() #TODO delete this stuff
+                        #quit()
                     elif modelname == 'CoSTA_LSTM':
                         self.models.append(CoSTA_LSTM_solver(p=p, T=self.T, Np=self.Np, tri=self.tri, time_steps=time_steps, **(NNkwargs[modelname])))
                     else:
@@ -830,9 +833,6 @@ class Solvers:
         start_time = datetime.datetime.now()
 
         # prepare plotting
-        fig, axs = plt.subplots(1,len(self.modelnames)) # For now, this requires self.models to be sorted by names
-        if len(self.modelnames) == 1:
-            axs=[axs] # required for indexing later
         prev_name = ''
         i=-1
 
@@ -853,17 +853,25 @@ class Solvers:
                     print("Models is not sorted by name") # note testing also needs this
                     1/0
                 epochs_vector = np.arange(1, len(model.train_hist)+1)
-                axs[i].plot(epochs_vector, model.train_hist, 'b--', label='train_losses')
-                axs[i].plot(epochs_vector, model.val_hist, 'r', label='val_losses')
+                plt.plot(epochs_vector, model.train_hist, '--', color=COLORS[model.name], label='train_losses')
+                plt.plot(epochs_vector, model.val_hist, color=COLORS[model.name], label='val_losses')
             else:
                 epochs_vector = np.arange(1, len(model.train_hist)+1)
-                axs[i].plot(epochs_vector, model.train_hist, 'b--')
-                axs[i].plot(epochs_vector, model.val_hist, 'r')
-            axs[i].set_yscale('log')
-            axs[i].set_xlabel('Number of epochs')
-            axs[i].set_ylabel('Loss (MSE)')
-            axs[i].legend(title=model.name)
-            axs[i].grid()
+                plt.plot(epochs_vector, model.train_hist, '--', color=COLORS[model.name])
+                plt.plot(epochs_vector, model.val_hist, color=COLORS[model.name])
+
+            # save history json file
+            with open(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}.json', "w") as f:
+                f.write(json.dumps({
+                    'train':model.train_hist, 
+                    'val':model.val_hist
+                    }))
+
+            plt.yscale('log')
+            plt.xlabel('Number of epochs')
+            plt.ylabel('Loss (MSE)')
+            plt.legend(title=model.name)
+            plt.grid()
 
         print(f'\nTime training all models: {datetime.datetime.now()-start_time}')
 
