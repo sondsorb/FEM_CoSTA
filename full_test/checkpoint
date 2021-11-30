@@ -1,0 +1,2 @@
+model_checkpoint_path: "15_CoSTA_pgDNN_5000_2"
+all_model_checkpoint_paths: "15_CoSTA_pgDNN_5000_2"
