@@ -53,3 +53,49 @@ new score 0.014196377175408701
 Changing max_depth from 15 by adding 3
 new score 0.015929774348961683
 Changing max_depth from 15 by adding -3
+
+
+
+2021-11-24 23:49:21.621971
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.01}
+Score to beat: 0.015890672099625483
+Changing l1_penalty from 0.01 by adding 1
+new score 0.2397456538797418
+tuner finished(!), after 0 iterations. Final score: 0.015890672099625483, found with params
+{'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.01}
+
+
+
+
+2021-11-24 23:51:31.417698
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.01}
+Score to beat: 0.012422915966976625
+Changing l1_penalty from 0.01 by adding -0.005
+new score 0.0098946409512496
+Changing l1_penalty from 0.005 by adding -0.0025
+new score 0.010570092115201173
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.005}
+Score to beat: 0.01204331434245148
+Changing l1_penalty from 0.005 by adding -0.0025
+new score 0.007945752360531098
+Changing l1_penalty from 0.0025 by adding -0.00125
+new score 0.01020989529965435
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.0025}
+Score to beat: 0.012286055116446037
+Changing l1_penalty from 0.0025 by adding -0.00125
+new score 0.00930579191504493
+Changing l1_penalty from 0.00125 by adding -0.000625
+new score 0.009998621706340607
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.00125}
+Score to beat: 0.00959450780422239
+Changing l1_penalty from 0.00125 by adding 0.00125
+new score 0.008848974251163195
+Changing l1_penalty from 0.0025 by adding 0.0025
+new score 0.007537165613787884
+Changing l1_penalty from 0.005 by adding 0.005
+new score 0.012877762938139293
+Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.005}

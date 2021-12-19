@@ -11,11 +11,11 @@ import FEM
 
 COLORS = {
         # (blac)k is reserved for exact solution
-        'FEM':'b',
-        'DNN':'darkorange',
-        'pgDNN':'gold',
-        'CoSTA_DNN':'g',
-        'CoSTA_pgDNN':'lime',
+        'FEM':(1,0,0),# blue
+        'DNN':(0.8,0.4,0), #gold
+        'pgDNN':(1,1,0), # yellow
+        'CoSTA_DNN': (0,0,1), # blue
+        'CoSTA_pgDNN':(0,0.5,0), # Green
         'LSTM':'r',
         'pgLSTM':'maroon',
         'CoSTA_LSTM':'c',
@@ -66,17 +66,18 @@ def get_DNN(input_shape, output_length, n_layers, depth, lr):
     model.compile(loss='mse', optimizer=opt)
     return model
 
-def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth, min_depth, n_layers_2, lr):
+def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth, min_depth, n_layers_2, lr, l1_penalty=0):
     '''
     Fully connected nerual network with 2 inputs, one at the start and one at a bottleneck
     '''
+    L1_reg = keras.regularizers.L1(l1=l1_penalty)
 
     inputs_1 = keras.Input(shape=input_shape_1)
     x = inputs_1
     for i in range(n_layers_1):
         current_depth = max_depth * (min_depth/max_depth)**(i/(n_layers_1-1))
         current_depth = int(round(current_depth))
-        x = layers.Dense(current_depth)(x)
+        x = layers.Dense(current_depth, kernel_regularizer=L1_reg)(x)
     model_1 = keras.Model(inputs_1, x)
 
     inputs_2 = keras.Input(shape=input_shape_2)
@@ -88,7 +89,7 @@ def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth
     for i in range(n_layers_2):
         current_depth = min_depth * (output_length/min_depth )**((i+1)/n_layers_2)
         current_depth = int(round(current_depth))
-        x = layers.Dense(current_depth)(x)
+        x = layers.Dense(current_depth, kernel_regularizer=L1_reg)(x)
 
     model = keras.Model(inputs=[model_1.input, model_2.input], outputs=x)
     opt = keras.optimizers.Adam(learning_rate=lr)
@@ -969,7 +970,8 @@ class Solvers:
             fem_model = FEM.Heat(self.tri, self.sol.f, self.p, self.sol.u, k=self.T/self.time_steps)
             fem_model.solve(self.time_steps, T = self.T, callback = relative_L2_callback)
             tri_fine = np.linspace(0,1,self.Ne*self.p*8+1)
-            axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'b', label='fem')
+            #axs[i].plot(tri_fine, fem_model.solution(tri_fine), 'b', label='fem')
+            axs[i].plot(tri_fine, fem_model.solution(tri_fine), color=COLORS['FEM'], label='fem')
 
             # prepare plotting
             prev_name = ''
@@ -991,10 +993,10 @@ class Solvers:
                         l2_scores[model.name] = []
                         L2_devs[alpha][model.name] = []
                         if not statplot:
-                            axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name], label=model.name)
+                            axs[i].plot(tri_fine, fem_model.solution(tri_fine), color=COLORS[model.name], label=model.name)
                     else:
                         if not statplot:
-                            axs[i].plot(tri_fine, fem_model.solution(tri_fine), COLORS[model.name])
+                            axs[i].plot(tri_fine, fem_model.solution(tri_fine), color=COLORS[model.name])
                     graphs[model.name].append(fem_model.solution(tri_fine))
                     L2_scores[model.name].append(fem_model.relative_L2())
                     l2_scores[model.name].append(rel_l2())
@@ -1009,7 +1011,7 @@ class Solvers:
                     axs[i].fill_between(tri_fine, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
             axs[i].plot(tri_fine, self.sol.u(tri_fine), 'k--', label='exact')
             axs[i].grid()
-            axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+            #axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
         plt.tight_layout()
         if figname != None:
@@ -1035,7 +1037,7 @@ class Solvers:
                         axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name], label=name)
 
                 axs[i].grid()
-                axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+                #axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
             plt.tight_layout()
             if figname != None:

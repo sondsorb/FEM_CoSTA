@@ -23,7 +23,7 @@ if debug_mode:
     elif modelname=='CoSTA_LSTM':
         nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3, 'dropout_level':0.2}
     elif modelname=='CoSTA_pgDNN':
-        nnkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':20,'min_depth':8}
+        nnkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':20,'min_depth':8,'l1_penalty':0.01}
     else:
         print('implement this first')
         quit()
@@ -37,12 +37,12 @@ else:
         nnkwargs = {'lstm_layers': 2, 'lstm_depth': 62, 'dense_layers': 1, 'dense_depth': 75, 'input_period': 18, 'dropout_level': 0.2, 'noise_level': 0.0005}
         #{'lstm_layers':2, 'lstm_depth':62, 'dense_layers':1, 'dense_depth':80, 'input_period':30, 'dropout_level':0.2, 'noise_level':1e-3}
     elif modelname=='CoSTA_pgDNN':
-        nnkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':80,'min_depth':14}
+        nnkwargs = {'n_layers_1':3,'n_layers_2':4,'max_depth':125,'min_depth':5,'l1_penalty':0.001}
     else:
         print('implement this first')
         quit()
     trainkwargs = {'lr':8e-5, 'patience':[20,20], 'epochs':[2000,2000], 'min_epochs':[50,50]}
-    NoM = 10
+    NoM = 1
     time_delta = 0.5
 
 Np = Ne+1
@@ -77,8 +77,8 @@ def get_models(trainkwargs, nnkwargs):
 
 
 # prepare solvers:
-f0,u0 = functions.SMBFACT_TUNING[0]
-f1,u1 = functions.SMBFACT_TUNING[1]
+f0,u0 = functions.SBMFACT_TUNING[0]
+f1,u1 = functions.SBMFACT_TUNING[1]
 sol0 = functions.Solution(T=T, f_raw=f0, u_raw=u0, zero_source=True, name=f'T0', time_delta=time_delta)
 sol1 = functions.Solution(T=T, f_raw=f1, u_raw=u1, zero_source=True, name=f'T1', time_delta=time_delta)
 
@@ -108,6 +108,7 @@ def get_score(nnkwargs, i, tag=''):
 
 parameters = [key for key in nnkwargs]
 #parameters = ['dropout_level', 'noise_level']
+parameters = ['l1_penalty']
 startscore = None
 
 # tune:
@@ -134,7 +135,7 @@ for tuning_iteration in range(500):
                     change = sign * 0.05
                     if change+nnkwargs[parameter] < 0:
                         break
-                elif parameter == 'noise_level':
+                elif parameter in ['noise_level', 'l1_penalty']:
                     change = nnkwargs[parameter] if sign>0 else -nnkwargs[parameter]/2
                 else:
                     change = sign * max(1, int(rate*nnkwargs[parameter]))
@@ -160,6 +161,7 @@ for tuning_iteration in range(500):
                 break
         total_changes += changes
     if total_changes == 0:
-        break
+        output('\nNO CHANGE!\n')
+        #break
 
 output(f'tuner finished(!), after {tuning_iteration} iterations. Final score: {score}, found with params\n{nnkwargs}\n\n')
