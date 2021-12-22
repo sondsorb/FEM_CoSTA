@@ -28,7 +28,7 @@ def set_args(mode=mode):
     if mode == 'bugfix':
         Ne = 5
         time_steps = 20
-        DNNkwargs = {'n_layers':4,'depth':20,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
+        DNNkwargs = {'n_layers':6,'depth':20,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
         pgDNNkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':20,'min_depth':8,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}#, 'l1_penalty':0.01}
         LSTMkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'lr':5e-3, 'patience':[10,10], 'epochs':[100,100], 'min_epochs':[50,50]}
         NoM = 2
@@ -92,13 +92,14 @@ for sol_index in [3,4,1,2]:
     f,u = functions.SBMFACT[sol_index]
     sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'{sol_index}', time_delta=time_delta)
     model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, NNkwargs=NNkwargs)
-    extra_tag = ''#_explosion' # for different names when testing specific stuff
+    extra_tag = '_both_square'#_explosion' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol_index}_p{p}{extra_tag}.pdf'
     model_folder = f'../preproject/saved_models/{mode}/'#_explosions/'
     figname = None
     model.plot=False
     #model.train(figname=figname, model_folder = model_folder)
-    model.load_weights(model_folder)
+    model.train(figname=figname)
+    #model.load_weights(model_folder)
 
     #model.plot=True
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}{extra_tag}.pdf'

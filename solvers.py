@@ -49,10 +49,10 @@ def get_DNN(input_shape, output_length, n_layers, depth, lr):
                 #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05),
                 #kernel_initializer='zeros',
                 #bias_initializer='zeros',
-                ),
+                )
             #layers.LeakyReLU(0.01),
             #layers.ReLU(),#negative_slope = 0.00),
-        ]*(n_layers-2) + [
+            for i in range(n_layers-3)] + [
             layers.Dense(
                 output_length,
                 #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-init, maxval=init) if init else None,
@@ -785,6 +785,10 @@ class Solvers:
                     self.modelnames[model.name] += 1
                 else:
                     self.modelnames[model.name] = 1
+
+        #for model in self.models:
+        #    model.model.summary()
+        #quit()
 
         self.create_data()
 
