@@ -8,6 +8,7 @@ import solvers
 from matplotlib import pyplot as plt
 
 def test_reshaping():
+    # Tests solvers.merge_first_dims
     i=3
     j=5
     k=7
@@ -45,7 +46,7 @@ def test1():
             Np=p*Ne+1
             e=test_function(u_ex, f, p, Np, True)
             assert e < e_prev/2
-    print('test1 passed (error -> 0 for increased p and Np, for dirichlet and neumann bdry cond)')
+    print('test1 passed (FEM.Poisson, error -> 0 for increased p and Np, for dirichlet and neumann bdry cond)')
 
 def test_function(u_ex, f, p, Np=13, neumann=False):
     model = FEM.Poisson(np.linspace(0,1,Np),f,p,u_ex)
@@ -122,9 +123,8 @@ def abdullah_bug_test():
 def sindres_mfact_test(sol=0, alpha=0.5, p=4):
     '''testing equations from sindres paper.'''
     T=1
-    f,u_ex = functions.sbmfact(T,alpha)[sol]
-    def u0(x): return u_ex(x,0)
-    def g(t): return u_ex(0,t), u_ex(1,t)
+    solution = functions.Solution(T, f_raw=functions.SBMFACT[sol][0], u_raw=functions.SBMFACT[sol][1], zero_source=False, name=f'{sol}')
+    solution.set_alpha(alpha)
 
 
     Ne=1
@@ -133,7 +133,7 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
     dofs=[]
     for i in range(5):
         tri = np.linspace(0,1,Ne*p+1)
-        model = FEM.Heat(tri, f, p, u_ex)
+        model = FEM.Heat(tri, solution.f, p, solution.u)
         model.solve(time_steps, T=T)
         u_fem = model.u_fem
         tri_fine = np.linspace(0,1,10*Ne*p+1)
@@ -143,8 +143,8 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
         Ne*=2
         time_steps*=2
         L2s.append(model.relative_L2())
-    plt.plot(tri_fine, u_ex(tri_fine), label='u_ex')
-    plt.legend(title=f'sol {sol}')
+    plt.plot(tri_fine, solution.u(tri_fine), label='u_ex')
+    plt.legend(title=f'sol {solution.name}')
     plt.show()
 
     plt.loglog(dofs,L2s)
@@ -155,7 +155,7 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 if __name__ == '__main__':
     test_reshaping()
     test1()
-    abdullah_bug_test()
+    #abdullah_bug_test()
     sindres_mfact_test(0,1)
     sindres_mfact_test(1,4)
     sindres_mfact_test(2,3)
