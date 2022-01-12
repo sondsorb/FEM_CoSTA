@@ -121,10 +121,10 @@ class Poisson(Fem_1d):
                 g = [g]
         if self.u_ex != None:
             g = [self.u_ex(self.tri[i]) for i in indices]
-        ep=1e-16
         for i in range(len(indices)):
-            self.A[indices[i],indices[i]] = -1/ep
-            self.F[indices[i]] = g[i]/ep
+            self.A[indices[i],:] = 0 # remove redundant equations
+            self.A[indices[i],indices[i]] = -1
+            self.F[indices[i]] = g[i]
     
     def add_Neumann_bdry(self, index,h):
         self.F[index] -= h
@@ -219,10 +219,11 @@ class Heat(Fem_1d):
             g = [self.u_ex(self.tri[i], t=self.time) for i in indices]
         else:
             g = [gt(t=self.time) for gt in g]
-        ep=1e-16
         for i in range(len(indices)):
-            self.MA[indices[i],indices[i]] = self.k/ep
-            self.F[indices[i]] = g[i]/ep
+            self.MA[indices[i],:] = 0 # remove redundant equations
+            self.M[indices[i],:] = 0
+            self.MA[indices[i],indices[i]] = self.k
+            self.F[indices[i]] = g[i]
 
     def step(self, g=None, correction = 0):
         '''Do one step of the backward euler scheme'''
