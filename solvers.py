@@ -25,48 +25,32 @@ COLORS = {
 def lrelu(x):
     return tf.keras.activations.relu(x, alpha=0.01)#, threshold=0,  max_value=0.01)
 
-def get_DNN(input_shape, output_length, n_layers, depth, lr):
+def get_DNN(input_shape, output_length, n_layers, depth, lr): #TODO remove/change arguments, and use them
 
     model = keras.Sequential(
         [
             layers.Dense(
                 depth,
-                #activation="sigmoid",
                 activation=lrelu,
                 input_shape=input_shape,
-                #kernel_regularizer=keras.regularizers.L2(),
-                #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.10, maxval=0.10),
-                #kernel_initializer='zeros',
-                #bias_initializer='zeros',
                 ),
-            #layers.LeakyReLU(0.01),
-            #layers.ReLU(),#negative_slope = 0.00),
         ] + [
             layers.Dense(
-                depth,
-                #activation="sigmoid",
+                depth2,#depth, #TODO fix this temporary workaround
                 activation=lrelu,
-                #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05),
-                #kernel_initializer='zeros',
-                #bias_initializer='zeros',
                 )
-            #layers.LeakyReLU(0.01),
-            #layers.ReLU(),#negative_slope = 0.00),
-            for i in range(n_layers-3)] + [
+            for depth2 in [8,80,80]] + [ #for i in range(n_layers-3)] + [
             layers.Dense(
                 output_length,
-                #kernel_initializer=tf.keras.initializers.RandomUniform(minval=-init, maxval=init) if init else None,
-                #kernel_initializer='zeros',
-                #bias_initializer=tf.keras.initializers.RandomUniform(minval=-init, maxval=init) if init else None,
-                #bias_initializer='zeros',
                 ),
         ]
     )
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
+    #model.summary()
     return model
 
-def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth, min_depth, n_layers_2, lr, l1_penalty=0):
+def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth, min_depth, n_layers_2, lr, l1_penalty=0): #TODO: remove/change arguments, and use them
     '''
     Fully connected nerual network with 2 inputs, one at the start and one at a bottleneck
     '''
@@ -74,9 +58,8 @@ def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth
 
     inputs_1 = keras.Input(shape=input_shape_1)
     x = inputs_1
-    for i in range(n_layers_1):
-        current_depth = max_depth * (min_depth/max_depth)**(i/(n_layers_1-1))
-        current_depth = int(round(current_depth))
+
+    for current_depth in [80,8]:
         x = layers.Dense(current_depth, kernel_regularizer=L1_reg)(x)
     model_1 = keras.Model(inputs_1, x)
 
@@ -86,14 +69,14 @@ def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, max_depth
 
     combined_input = layers.concatenate([model_1.output, model_2.output])
     x = combined_input 
-    for i in range(n_layers_2):
-        current_depth = min_depth * (output_length/min_depth )**((i+1)/n_layers_2)
-        current_depth = int(round(current_depth))
+    for current_depth in [80,80,output_length]:
         x = layers.Dense(current_depth, kernel_regularizer=L1_reg)(x)
+
 
     model = keras.Model(inputs=[model_1.input, model_2.input], outputs=x)
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
+    #model.summary()
     return model
 
 def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr, dropout_level=0):
@@ -865,12 +848,13 @@ class Solvers:
                 plt.plot(epochs_vector, model.train_hist, '--', color=COLORS[model.name])
                 plt.plot(epochs_vector, model.val_hist, color=COLORS[model.name])
 
-            # save history json file
-            with open(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}.json', "w") as f:
-                f.write(json.dumps({
-                    'train':model.train_hist, 
-                    'val':model.val_hist
-                    }))
+            if model_folder != None:
+                # save history json file
+                with open(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}.json', "w") as f:
+                    f.write(json.dumps({
+                        'train':model.train_hist, 
+                        'val':model.val_hist
+                        }))
 
             plt.yscale('log')
             plt.xlabel('Number of epochs')
