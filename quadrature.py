@@ -37,7 +37,7 @@ def quadrature1d(a, b, Nq, g):
         return "error"
     return I*(b-a)/2
 
-def quadrature1dplane(a, b, Nq, g):
+def quadrature2dline(a, b, Nq, g):
     """
         Takes in two points in R2, and a function g. Then approximates the line integral for a straight
         line between a and b, using Gaussian quadrature with Nq points.
@@ -138,7 +138,7 @@ if __name__=="__main__":
     b = [2, 0]
     for i in range(4):
         print("Testing with ", i+1, "quadrature points gives:")
-        I_num = quadrature1dplane(a, b, i+1, h)
+        I_num = quadrature2dline(a, b, i+1, h)
         print("Integral value equal to: ", I_num)
         print("Absolute error equal to: ", np.abs(I-I_num), '\n')
 
@@ -169,3 +169,27 @@ if __name__=="__main__":
         print("Absolute error equal to: ", np.abs(I-I_num), '\n')
 
 
+    if mode == 'bugfix':
+        Ne = 5
+        time_steps = 20
+        DNNkwargs = {'n_layers':6,'depth':20,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
+        pgDNNkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':20,'min_depth':8,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}#, 'l1_penalty':0.01}
+        LSTMkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'lr':5e-3, 'patience':[10,10], 'epochs':[100,100], 'min_epochs':[50,50]}
+        NoM = 2
+        time_delta = 5
+    elif mode == 'quick_test':
+        Ne = 20
+        time_steps = 500
+        DNNkwargs = {'n_layers':6,'depth':80, 'lr':8e-5, 'patience':[20,20]}
+        pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'max_depth':125,'min_depth':5,'lr':8e-5,'patience':[20,20]}
+        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20]}
+        NoM=3
+        time_delta = 0.3 # max 30 steps back
+    elif mode == 'full_test':
+        Ne = 20
+        time_steps = 5000
+        DNNkwargs = {'n_layers':6,'depth':80, 'lr':1e-5, 'patience':[20,20]}
+        pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'max_depth':125,'min_depth':5,'lr':1e-5,'patience':[20,20]}
+        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20]}
+        NoM=10
+        time_delta = 0

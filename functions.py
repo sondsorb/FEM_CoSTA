@@ -1,4 +1,6 @@
 import numpy as np
+import sympy as sp
+from sympy.utilities.lambdify import lambdify
 
 
 
@@ -61,3 +63,13 @@ class Solution:
         if t==None:
             t = self.T
         return 0 if self.zero_source else self.f_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
+
+def manufacture_solution(u, t_var, x_var, y_var, alpha_var):
+    '''Manufactures f from the 2d heat equation given u (sympy equation)
+    returns functions with y=0'''
+    f = u.diff(t_var) - u.diff(x_var,x_var) - u.diff(y_var,y_var)
+    time_delta = sp.symbols('time_delta')
+    return (
+            lambdify([x_var,t_var,alpha_var,time_delta],f.subs(y_var,0), "numpy"),
+            lambdify([x_var,t_var,alpha_var,time_delta],u.subs(y_var,0), "numpy")
+           )

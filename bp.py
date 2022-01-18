@@ -4,7 +4,35 @@ import FEM
 import solvers
 import functions
 from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, cm
 import sys
+
+import sympy as sp
+
+
+t = sp.symbols('t')
+x = sp.symbols('x')
+y = sp.symbols('y')
+alpha = sp.symbols('alpha')
+u = sp.exp(-t/(2-x**2-(y-(1+alpha)/4)**2)) # TODO: calculate a realistic u more properly
+
+#a = np.array([0,1,2]) 
+#from sympy.utilities.lambdify import lambdify
+#print(u)
+#print(u.subs(y,0))
+#
+#
+#f = u.diff(t) - u.diff(x,x) - u.diff(y,y)
+#u = lambdify([x,y,t,alpha],f, "numpy")
+#print(u(a,a,a,a))
+#quit()
+
+## Test: solution 4
+#u = 1+sp.sin(2*sp.pi*t+alpha)*sp.cos(2*sp.pi*x)
+#f = u.diff(t) - u.diff(x,x) - u.diff(y,y)
+#print(f)
+# gives corrrect f
+
 
 mode = 'bugfix'
 if len(sys.argv)>1:
@@ -59,7 +87,7 @@ if len(sys.argv)>2:
         source = False
     else:
         print('failed reading source term')
-        source = False
+        source = True
 else:
     source = False
 print('Using exact source' if source else 'Using unknown source (i.e. guessing zero)')
@@ -75,7 +103,7 @@ modelnames = {
         #'pgDNN' : NoM,
         #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
-        'CoSTA_pgDNN' : NoM,
+        #'CoSTA_pgDNN' : NoM,
         #'CoSTA_LSTM' : NoM,
         }
 NNkwargs = {
@@ -87,28 +115,21 @@ NNkwargs = {
         'CoSTA_LSTM':LSTMkwargs, 
         }
 
-for sol_index in [3,4,1,2]:
-    print(f'sol_index: {sol_index}\n')
-    f,u = functions.SBMFACT[sol_index]
-    sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'{sol_index}', time_delta=time_delta)
-    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, NNkwargs=NNkwargs)
-    extra_tag = '_both_bn'#_explosion' # for different names when testing specific stuff
-    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol_index}_p{p}{extra_tag}.pdf'
-    model_folder = f'../preproject/saved_models/{mode}{extra_tag}/'#_explosions/'
-    figname = None
-    model.plot=True
-    #model.train(figname=figname, model_folder = model_folder)
-    model.train(figname=figname)
-    #model.load_weights(model_folder)
 
-    #model.plot=True
-    #figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}{extra_tag}.pdf'
-    #figname = None
-    _ = model.test(interpol = True, figname=figname, ignore_models=['pgDNN'])
-    #figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}{extra_tag}.pdf'
-    #figname = None
-    _ = model.test(interpol = False, figname=figname, ignore_models=['pgDNN'])
+f,u = functions.manufacture_solution(u,t,x,y,alpha)
+sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'bp_tst1', time_delta=time_delta)
 
-    #extra_tag = '_xxpol'
-    #model.alpha_test_extrapol = [-0.9,4]
-    #_ = model.test(interpol = False, figname=figname, ignore_models=['pgDNN'])
+model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, a=-1, b=1, NNkwargs=NNkwargs)
+extra_tag = '' # for different names when testing specific stuff
+figname = None
+model_folder = None
+model.plot=True
+#model.train(figname=figname, model_folder = model_folder)
+model.train(figname=figname)
+#model.load_weights(model_folder)
+
+figname = None
+#figname = None
+_ = model.test(interpol = True, figname=figname)
+#figname = None
+_ = model.test(interpol = False, figname=figname)
