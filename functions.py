@@ -69,7 +69,10 @@ class Solution:
 def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
     '''Manufactures f from the 2d heat equation given u (sympy equation)
     returns functions with y=0'''
-    assert d1>=d2 and d1<4 and d2>0
+    print(d1,d2)
+    assert d1>=d2
+    assert d1<4
+    assert d2>0
     f = u.diff(t_var)
     for d in range(d1):
         f -= u.diff(x_vars[d], x_vars[d])
@@ -78,8 +81,9 @@ def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
     def f(x,t,alpha,time_delta=0):
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     def u(x,t,alpha,time_delta=0):
-        if length(x[0])>0: # if x is a list, and not a single point, we unpack recursively
+        if length(x)>d2: # if x is a list, and not a single point, we unpack recursively
             return np.array([u(x_i,t,alpha,time_delta) for x_i in x])
-        assert length(x) == d2
+        assert (length(x)) == (d2 if d2>1 else 0)
+        x = [x] if length(x) == 0 else x
         return u_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     return (f,u)

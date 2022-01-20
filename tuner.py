@@ -5,10 +5,10 @@ import datetime
 import numpy as np
 
 # Configs for tuning:
-debug_mode = False
+debug_mode = True
 #modelname = 'LSTM'
-#modelname = 'CoSTA_LSTM'
-modelname = 'CoSTA_pgDNN'
+modelname = 'CoSTA_LSTM'
+#modelname = 'CoSTA_pgDNN'
 NoM = 3
 T = 5
 rate = 0.25 # Rate to change parameters
@@ -46,7 +46,7 @@ else:
     time_delta = 0.5
 
 Np = Ne+1
-tri = np.linspace(0,1,Np)
+pts = np.linspace(0,1,Np)
 
 def output(text):
     print(text)
@@ -60,15 +60,15 @@ def get_models(trainkwargs, nnkwargs):
     kwargs = {**trainkwargs, **nnkwargs}
     for i in range(NoM):
         #if modelname == 'DNN':
-        #    models.append(solvers.DNN_solver(T=T, tri=tri, time_steps=time_steps, Np=Np, **DNNkwargs))
+        #    models.append(solvers.DNN_solver(T=T, pts=pts, time_steps=time_steps, Np=Np, **DNNkwargs))
         if modelname == 'LSTM':
-            models.append(solvers.LSTM_solver(T=T, tri=tri, time_steps=time_steps, Np=Np, **kwargs))
+            models.append(solvers.LSTM_solver(T=T, pts=pts, time_steps=time_steps, Np=Np, **kwargs))
         #if modelname == 'CoSTA_DNN':
-        #    models.append(solvers.CoSTA_DNN_solver(T=T, Np=Np, tri=tri, time_steps=time_steps, **DNNkwargs))
+        #    models.append(solvers.CoSTA_DNN_solver(T=T, Np=Np, pts=pts, time_steps=time_steps, **DNNkwargs))
         elif modelname == 'CoSTA_LSTM':
-            models.append(solvers.CoSTA_LSTM_solver(p=p,T=T, Np=Np, tri=tri, time_steps=time_steps, **kwargs))
+            models.append(solvers.CoSTA_LSTM_solver(p=p,T=T, Np=Np, pts=pts, time_steps=time_steps, **kwargs))
         elif modelname == 'CoSTA_pgDNN':
-            models.append(solvers.CoSTA_pgDNN_solver(p=p,T=T, Np=Np, tri=tri, time_steps=time_steps, **kwargs))
+            models.append(solvers.CoSTA_pgDNN_solver(p=p,T=T, Np=Np, pts=pts, time_steps=time_steps, **kwargs))
         else:
             print('implement this first')
             quit()
@@ -108,7 +108,7 @@ def get_score(nnkwargs, i, tag=''):
 
 parameters = [key for key in nnkwargs]
 #parameters = ['dropout_level', 'noise_level']
-parameters = ['l1_penalty']
+#parameters = ['l1_penalty']
 startscore = None
 
 # tune:

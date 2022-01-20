@@ -85,3 +85,22 @@ Using training parameters: {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 1
 Score to beat: 0.08627
 Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
 Changing noise_level from 0.001 by adding -0.0005
+
+
+
+2022-01-20 19:00:55.524494
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
+Score to beat: 0.03588213112690043
+
+
+
+2022-01-20 19:03:47.038141
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'lstm_layers': 2, 'lstm_depth': 20, 'dense_layers': 1, 'dense_depth': 20, 'input_period': 5, 'noise_level': 0.001, 'dropout_level': 0.2}
+Score to beat: 0.04541105374345066
+Changing dense_depth from 20 by adding 5
+new score 0.04996655777732558
+Changing dense_depth from 20 by adding -5

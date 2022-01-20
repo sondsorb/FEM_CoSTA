@@ -6,12 +6,12 @@ from matplotlib import pyplot as plt, cm
 from utils import zero, length
 
 
-def L2(tri, f1, f2 = zero):
+def L2(pts, f1, f2 = zero):
     '''returns L2 of f1-f2, (just f1 if f2 is empty)'''
     l=0
     def integrand(x): return (f1(x)-f2(x))**2
-    for i in range(len(tri)-1):
-        l+= quadrature.quadrature1d(tri[i],tri[i+1],5,integrand)
+    for i in range(len(pts)-1):
+        l+= quadrature.quadrature1d(pts[i],pts[i+1],5,integrand)
     return l**0.5
 
 def L2_2d(pts,tri, f1, f2 = zero):
@@ -27,27 +27,27 @@ def L2_2d(pts,tri, f1, f2 = zero):
 
 class Fem_1d:
 
-    def __init__(self, tri, f, p, u_ex=None):
-        self.Np = len(tri) #Np number of grid nodes
-        self.tri = tri #triangulation, form [a0,a1,a2,a3,...aNp]
+    def __init__(self, pts, f, p, u_ex=None):
+        self.Np = len(pts) #Np number of grid nodes
+        self.pts = pts #triangulation, form [a0,a1,a2,a3,...aNp]
         self.f = f # source function
         self.p = p # degree of test functions'''
         self.u_ex = u_ex # exact function if provided
         assert (self.Np-1)%p==0
 
     def single_point_solution(self, x):
-        tri=self.tri
+        pts=self.pts
         p=self.p
         vct = self.u_fem
         # we find the element where x is:
-        for i in range(0,len(tri)-p,p): # tri[i] will be start of element
-            if tri[i+p] >= x: # tri[i+p] is end of element
+        for i in range(0,len(pts)-p,p): # pts[i] will be start of element
+            if pts[i+p] >= x: # pts[i+p] is end of element
                 result=0
                 for j in range(p+1): # j local index of basis function
                     l = 1 # langrange pol
                     for k in range(p+1): # k
                         if k!=j:
-                            l*=(x-tri[i+k])/(tri[i+j]-tri[i+k])
+                            l*=(x-pts[i+k])/(pts[i+j]-pts[i+k])
                     result += vct[i+j]*l
                 return result
         print('Error: function evaluated outside domain')
@@ -60,15 +60,15 @@ class Fem_1d:
             return self.single_point_solution(x)
 
     def relative_L2(self, ):
-        return L2(self.tri,self.u_ex,self.solution)/L2(self.tri,self.u_ex)
+        return L2(self.pts,self.u_ex,self.solution)/L2(self.pts,self.u_ex)
 
     def set_u_ex(self, u_ex):
         self.u_ex = u_ex
 
 
 class Poisson(Fem_1d):
-    def __init__(self, tri, f, p=1, u_ex=None):
-        super().__init__(tri,f,p,u_ex)
+    def __init__(self, pts, f, p=1, u_ex=None):
+        super().__init__(pts,f,p,u_ex)
 
         Np=self.Np
         F = np.zeros((Np))
@@ -85,27 +85,27 @@ class Poisson(Fem_1d):
                         nphj = 0 #nabla(phi_j)
                         for m in range(p+1):
                             if m!=i:
-                                producti=1/(tri[k+i]-tri[k+m])
+                                producti=1/(pts[k+i]-pts[k+m])
                                 for l in range(p+1):
                                     if l!=i and l!=m:
-                                        producti *= (x-tri[k+l])/(tri[k+i]-tri[k+l])
+                                        producti *= (x-pts[k+l])/(pts[k+i]-pts[k+l])
                                 nphi += producti
                             if m!=j:
-                                productj=1/(tri[k+j]-tri[k+m])
+                                productj=1/(pts[k+j]-pts[k+m])
                                 for l in range(p+1):
                                     if l!=j and l!=m:
-                                        productj *= (x-tri[k+l])/(tri[k+j]-tri[k+l])
+                                        productj *= (x-pts[k+l])/(pts[k+j]-pts[k+l])
                                 nphj += productj
                         return nphi*nphj
-                    A[k+i,k+j] += quadrature.quadrature1d(tri[k],tri[k+p],p, integrand)
+                    A[k+i,k+j] += quadrature.quadrature1d(pts[k],pts[k+p],p, integrand)
                 def integrand(x):
                     # this is the integrand phi_i*f
                     phi = 1
                     for j in range(p+1):
                         if j!=i:
-                            phi *= (x-tri[k+j])/(tri[k+i]-tri[k+j])
+                            phi *= (x-pts[k+j])/(pts[k+i]-pts[k+j])
                     return phi*f(x)
-                F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],5, integrand)
+                F[k+i] += quadrature.quadrature1d(pts[k],pts[k+p],5, integrand)
         self.A=A
         self.F=F
 
@@ -118,7 +118,7 @@ class Poisson(Fem_1d):
                 assert length(indices) == length(g)
                 g = [g]
         if self.u_ex != None:
-            g = [self.u_ex(self.tri[i]) for i in indices]
+            g = [self.u_ex(self.pts[i]) for i in indices]
         for i in range(len(indices)):
             self.A[indices[i],:] = 0 # remove redundant equations
             self.A[indices[i],indices[i]] = -1
@@ -132,24 +132,24 @@ class Poisson(Fem_1d):
 
 
 class Heat(Fem_1d):
-    def __init__(self, tri, f, p=1, u_ex=None, k=None):
+    def __init__(self, pts, f, p=1, u_ex=None, k=None):
         '''With backwards euler, so on step is (M+kA)u_new = u_old + kf
 
         Np number of grid points
-        tri: triangulation, form [a0,a1,a2,a3,...aNp]
+        pts: triangulation, form [a0,a1,a2,a3,...aNp]
         p: polynomial degree of test functoins
         f: source, form f(x,t)
         u_ex: exact solution. Form: u_ex(x,t=T) (important that T is default time,
                                     time is not provided when calculating L2)
         k: time step lenght. Only needs to be given when usin step() and not solve()
         '''
-        super().__init__(tri,f,p,u_ex)
+        super().__init__(pts,f,p,u_ex)
         self.time=0
         self.k = k
 
     def __discretize(self):
         Np = self.Np
-        tri= self.tri
+        pts= self.pts
         p = self.p
         F = np.zeros((Np))
         A = np.zeros((Np,Np))
@@ -167,19 +167,19 @@ class Heat(Fem_1d):
                         nphj = 0 #nabla(phi_j)
                         for m in range(p+1):
                             if m!=i:
-                                producti=1/(tri[k+i]-tri[k+m])
+                                producti=1/(pts[k+i]-pts[k+m])
                                 for l in range(p+1):
                                     if l!=i and l!=m:
-                                        producti *= (x-tri[k+l])/(tri[k+i]-tri[k+l])
+                                        producti *= (x-pts[k+l])/(pts[k+i]-pts[k+l])
                                 nphi += producti
                             if m!=j:
-                                productj=1/(tri[k+j]-tri[k+m])
+                                productj=1/(pts[k+j]-pts[k+m])
                                 for l in range(p+1):
                                     if l!=j and l!=m:
-                                        productj *= (x-tri[k+l])/(tri[k+j]-tri[k+l])
+                                        productj *= (x-pts[k+l])/(pts[k+j]-pts[k+l])
                                 nphj += productj
                         return nphi*nphj
-                    A[k+i,k+j] += quadrature.quadrature1d(tri[k],tri[k+p],p, integrand)
+                    A[k+i,k+j] += quadrature.quadrature1d(pts[k],pts[k+p],p, integrand)
 
                     def integrand(x): # for m_ij
                         # this integrand is phi_i*phi_j
@@ -188,20 +188,20 @@ class Heat(Fem_1d):
                         phj = 1 #phi_j
                         for m in range(p+1):
                             if m!=i:
-                                phi*=(x-tri[k+m])/(tri[k+i]-tri[k+m])
+                                phi*=(x-pts[k+m])/(pts[k+i]-pts[k+m])
                             if m!=j:
-                                phj*=(x-tri[k+m])/(tri[k+j]-tri[k+m])
+                                phj*=(x-pts[k+m])/(pts[k+j]-pts[k+m])
                         return phi*phj
-                    M[k+i,k+j] += quadrature.quadrature1d(tri[k],tri[k+p],p+1, integrand)
+                    M[k+i,k+j] += quadrature.quadrature1d(pts[k],pts[k+p],p+1, integrand)
 
                 def integrand(x): # for f_i
                     # this is the integrand phi_i*f
                     phi = 1
                     for j in range(p+1):
                         if j!=i:
-                            phi *= (x-tri[k+j])/(tri[k+i]-tri[k+j])
+                            phi *= (x-pts[k+j])/(pts[k+i]-pts[k+j])
                     return phi*self.f(x=x, t=self.time)
-                F[k+i] += quadrature.quadrature1d(tri[k],tri[k+p],5, integrand)
+                F[k+i] += quadrature.quadrature1d(pts[k],pts[k+p],5, integrand)
 
         return M,A,F
 
@@ -214,7 +214,7 @@ class Heat(Fem_1d):
                 assert length(indices) == length(g)
                 g = [g]
         if g == None:
-            g = [self.u_ex(self.tri[i], t=self.time) for i in indices]
+            g = [self.u_ex(self.pts[i], t=self.time) for i in indices]
         else:
             g = [gt(t=self.time) for gt in g]
         for i in range(len(indices)):
@@ -242,9 +242,9 @@ class Heat(Fem_1d):
         self.k=k
 
         if u0 != None:
-            self.u_fem = u0(self.tri)
+            self.u_fem = u0(self.pts)
         else:
-            self.u_fem = self.u_ex(self.tri, t=0)
+            self.u_fem = self.u_ex(self.pts, t=0)
         for t in range(time_steps):
             self.step(g)
             if callback!=None:

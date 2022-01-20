@@ -99,3 +99,9 @@ new score 0.007537165613787884
 Changing l1_penalty from 0.005 by adding 0.005
 new score 0.012877762938139293
 Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, 'max_depth': 20, 'min_depth': 8, 'l1_penalty': 0.005}
+
+
+
+2022-01-20 19:00:09.103283
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+

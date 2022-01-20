@@ -21,6 +21,7 @@ def test_2d_heat():
     sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'2d_tst1')
     sol.set_alpha(1)
 
+    print('The following 3 numbers are L2 for increasing amount of nodes and steps, so they should approach zero:')
     n=3
     pts, tri, edge = getplate.getPlate(n)
     fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
@@ -67,7 +68,7 @@ def test_fem_2d():
 
     fem_model = FEM.Fem_2d(pts, tri, edge, f=FEM.zero, p=1, u_ex=None)
     fem_model.u_fem = vct
-    fem_model.u_ex = lambda x : 1
+    fem_model.u_ex = lambda x : np.ones(np.array(x).shape[:-1])
     print(fem_model.relative_L2())
     fem_model.plot_solution()
 
@@ -193,10 +194,10 @@ def abdullah_bug_test():
                 model.solve ()
                 L2s[i,j] = model.relative_L2()
 
-                ##tri_fine = np.linspace(0,1,(Np-1)*10+1)
-                ##u_fem_fnc = FEM.fnc_from_vct(tri,u_fem,p)
-                ##plt.plot(tri_fine, u_ex(tri_fine), label='u_ex')
-                ##plt.plot(tri_fine, u_fem_fnc(tri_fine), label='fem')
+                ##pts_fine = np.linspace(0,1,(Np-1)*10+1)
+                ##u_fem_fnc = FEM.fnc_from_vct(pts,u_fem,p)
+                ##plt.plot(pts_fine, u_ex(pts_fine), label='u_ex')
+                ##plt.plot(pts_fine, u_fem_fnc(pts_fine), label='fem')
                 ##plt.legend()
                 ##plt.show()
 
@@ -238,18 +239,18 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
     L2s=[]
     dofs=[]
     for i in range(5):
-        tri = np.linspace(0,1,Ne*p+1)
-        model = FEM.Heat(tri, solution.f, p, solution.u)
+        pts = np.linspace(0,1,Ne*p+1)
+        model = FEM.Heat(pts, solution.f, p, solution.u)
         model.solve(time_steps, T=T)
         u_fem = model.u_fem
-        tri_fine = np.linspace(0,1,10*Ne*p+1)
+        pts_fine = np.linspace(0,1,10*Ne*p+1)
 
-        plt.plot(tri_fine,model.solution(tri_fine), label=f'Ne,ts={Ne},{time_steps}')
+        plt.plot(pts_fine,model.solution(pts_fine), label=f'Ne,ts={Ne},{time_steps}')
         dofs.append((Ne*p-1)*time_steps)
         Ne*=2
         time_steps*=2
         L2s.append(model.relative_L2())
-    plt.plot(tri_fine, solution.u(tri_fine), label='u_ex')
+    plt.plot(pts_fine, solution.u(pts_fine), label='u_ex')
     plt.legend(title=f'sol {solution.name}')
     plt.show()
 
@@ -260,7 +261,6 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 if __name__ == '__main__':
     test_2d_heat()
-    quit()
     test_fem_2d()
     test_in_triangle()
     test_reshaping()
