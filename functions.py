@@ -1,6 +1,7 @@
 import numpy as np
 import sympy as sp
 from sympy.utilities.lambdify import lambdify
+from utils import length
 
 
 
@@ -64,12 +65,21 @@ class Solution:
             t = self.T
         return 0 if self.zero_source else self.f_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
 
-def manufacture_solution(u, t_var, x_var, y_var, alpha_var):
+
+def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
     '''Manufactures f from the 2d heat equation given u (sympy equation)
     returns functions with y=0'''
-    f = u.diff(t_var) - u.diff(x_var,x_var) - u.diff(y_var,y_var)
-    time_delta = sp.symbols('time_delta')
-    return (
-            lambdify([x_var,t_var,alpha_var,time_delta],f.subs(y_var,0), "numpy"),
-            lambdify([x_var,t_var,alpha_var,time_delta],u.subs(y_var,0), "numpy")
-           )
+    assert d1>=d2 and d1<4 and d2>0
+    f = u.diff(t_var)
+    for d in range(d1):
+        f -= u.diff(x_vars[d], x_vars[d])
+    f_temp = lambdify([*[x_vars],t_var,alpha_var],f, "numpy")
+    u_temp = lambdify([*[x_vars],t_var,alpha_var],u, "numpy")
+    def f(x,t,alpha,time_delta=0):
+        return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
+    def u(x,t,alpha,time_delta=0):
+        if length(x[0])>0: # if x is a list, and not a single point, we unpack recursively
+            return np.array([u(x_i,t,alpha,time_delta) for x_i in x])
+        assert length(x) == d2
+        return u_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
+    return (f,u)

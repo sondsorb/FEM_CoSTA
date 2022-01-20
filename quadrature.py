@@ -71,7 +71,7 @@ def quadrature2dline(a, b, Nq, g):
         return "error"
     return I*dist
 
-def quadrature2d(p1, p2, p3, Nq, g):
+def quadrature2d(p1, p2, p3, Nq, g_vect):
     """
         Calculate Gaussian quadrature over a triangle with corners p1, p2 and p3 for function g.
         p1 - First vertex of triangle
@@ -80,6 +80,7 @@ def quadrature2d(p1, p2, p3, Nq, g):
         Nq - number of quadrature points
         g - pointer to function to integrate
     """
+    g = lambda x,y: g_vect([x,y]) # workaround for different syntax convetions in these files. TODO: change this file to vector format
 
     #The matrix A stores all information about the transform to the reference element
     A = [p2[0]-p1[0], p3[0]-p1[0], p2[1]-p1[1], p3[1]-p1[1]]

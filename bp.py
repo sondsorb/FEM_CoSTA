@@ -6,26 +6,10 @@ import functions
 from matplotlib import pyplot as plt
 from matplotlib import pyplot as plt, cm
 import sys
-
 import sympy as sp
 
 
-t = sp.symbols('t')
-x = sp.symbols('x')
-y = sp.symbols('y')
-alpha = sp.symbols('alpha')
-u = sp.exp(-t/(2-x**2-(y-(1+alpha)/4)**2)) # TODO: calculate a realistic u more properly
 
-#a = np.array([0,1,2]) 
-#from sympy.utilities.lambdify import lambdify
-#print(u)
-#print(u.subs(y,0))
-#
-#
-#f = u.diff(t) - u.diff(x,x) - u.diff(y,y)
-#u = lambdify([x,y,t,alpha],f, "numpy")
-#print(u(a,a,a,a))
-#quit()
 
 ## Test: solution 4
 #u = 1+sp.sin(2*sp.pi*t+alpha)*sp.cos(2*sp.pi*x)
@@ -82,7 +66,7 @@ set_args()
 
 if len(sys.argv)>2:
     if sys.argv[2]=='f':
-        source = True 
+        source = True
     elif sys.argv[2]=='0':
         source = False
     else:
@@ -107,14 +91,19 @@ modelnames = {
         #'CoSTA_LSTM' : NoM,
         }
 NNkwargs = {
-        'DNN':DNNkwargs, 
+        'DNN':DNNkwargs,
         'CoSTA_DNN':DNNkwargs,
         'pgDNN' : pgDNNkwargs,
         'CoSTA_pgDNN':pgDNNkwargs,
-        'LSTM':LSTMkwargs, 
-        'CoSTA_LSTM':LSTMkwargs, 
+        'LSTM':LSTMkwargs,
+        'CoSTA_LSTM':LSTMkwargs,
         }
 
+t = sp.symbols('t')
+x = sp.symbols('x')
+y = sp.symbols('y')
+alpha = sp.symbols('alpha')
+u = sp.exp(-t/(2-x**2-(y-(1+alpha)/4)**2)) # TODO: calculate a realistic u more properly
 
 f,u = functions.manufacture_solution(u,t,x,y,alpha)
 sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'bp_tst1', time_delta=time_delta)

@@ -1,11 +1,117 @@
 # This file contains tests to verify that the code in this project works as it should
-
 import numpy as np
 import quadrature
 import functions
 import FEM
 import solvers
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, cm
+import getplate
+import sympy as sp
+import utils
+
+def test_2d_heat():
+    t = sp.symbols('t')
+    x = sp.symbols('x')
+    y = sp.symbols('y')
+    alpha = sp.symbols('alpha')
+    u = sp.exp(-t/(3.5-x**2-(y-(1+alpha)/4)**2))
+    #u = x*x+y*y+t
+
+    f,u = functions.manufacture_solution(u,t,[x,y],alpha_var=alpha, d1=2,d2=2)
+    sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'2d_tst1')
+    sol.set_alpha(1)
+
+    n=3
+    pts, tri, edge = getplate.getPlate(n)
+    fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model.solve(5)
+    print(fem_model.relative_L2())
+    fem_model.plot_solution()
+    n=6
+    pts, tri, edge = getplate.getPlate(n)
+    fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model.solve(20)
+    print(fem_model.relative_L2())
+    fem_model.plot_solution()
+    n=10
+    pts, tri, edge = getplate.getPlate(n)
+    fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model.solve(50)
+    print(fem_model.relative_L2())
+    fem_model.plot_solution()
+
+
+
+def test_fem_2d():
+    n = 8
+    pts, tri, edge = getplate.getPlate(n)
+    vct = np.zeros(len(pts))
+    vct[33]=1
+    vct[34]=1
+    vct[35]=1
+    vct[36]=1
+    vct[37]=1
+    vct[38]=1
+    vct[39]=1
+    vct[43]=1
+    vct[44]=1
+    vct[45]=1
+    vct[46]=1
+    vct[47]=1
+    vct[48]=1
+    vct[49]=1
+    vct[50]=1
+    vct[53]=1
+    vct[52]=1
+    vct[51]=1
+
+    fem_model = FEM.Fem_2d(pts, tri, edge, f=FEM.zero, p=1, u_ex=None)
+    fem_model.u_fem = vct
+    fem_model.u_ex = lambda x : 1
+    print(fem_model.relative_L2())
+    fem_model.plot_solution()
+
+
+def test_in_triangle():
+    print('--- INTERPRETING THE TRIANGULATION PLOT ---')
+    print('Testing the FEM.in_triangle functions ability to find the correct triangle')
+    print('Red circle is a random point, and the triangle it is in should have red nodes')
+    print('Green circle is on a random line, and all the (up to two) triangles sharing it should have green nodes')
+    print('Yellow circle is random node, all triangles around it should have yellow nodes')
+    print('Note that overlapping may occur, making it seem incorrect. Yellow is plotted first, then green then red.')
+    # make triangulation
+    N = 12
+    p, tri, edge = getplate.getPlate(N)
+    # print triangulation
+    for triangle in tri:
+        for local_line in [[0,1],[1,2],[2,0]]: # Plot edges of each triangle
+            line = [triangle[local_line[0]], triangle[local_line[1]]]
+            plt.plot([p[line[0],0], p[line[1],0]],[p[line[0],1], p[line[1],1]],'k-', linewidth=0.5)
+    for line in edge: # Plot thicker edges along the boundary
+        plt.plot([p[line[0],0], p[line[1],0]],[p[line[0],1], p[line[1],1]],'k-')
+
+    plt.plot(p[:,0], p[:,1], 'bx') # Plot nodes
+    # Pick random nodal point, find triangles, and plot
+    x = p[np.random.randint(N**2)]
+    for t in tri:
+        if FEM.in_triangle(p[t[0]],p[t[1]],p[t[2]],x):
+            plt.plot(p[t[:],0],p[t[:],1], f'yx') # Plot nodes
+    plt.plot(x[0],x[1], f'yo')
+    # Pick random point on a line, find triangles, and plot
+    chosen_triangle = tri[np.random.randint(len(tri))]
+    chosen_pt = np.random.randint(3)
+    x = p[chosen_triangle[chosen_pt]] + (p[chosen_triangle[(chosen_pt+1)%3]]-p[chosen_triangle[chosen_pt]]) * np.random.random(1)
+    for t in tri:
+        if FEM.in_triangle(p[t[0]],p[t[1]],p[t[2]],x):
+            plt.plot(p[t[:],0],p[t[:],1], f'gx') # Plot nodes
+    plt.plot(x[0],x[1], f'go')
+    # Pick random point, find triangle(s), and plot
+    x = np.random.random(2)*2 - np.array([1,1])
+    for t in tri:
+        if FEM.in_triangle(p[t[0]],p[t[1]],p[t[2]],x):
+            plt.plot(p[t[:],0],p[t[:],1], f'rx') # Plot nodes
+    plt.plot(x[0],x[1], f'ro')
+    plt.show()
 
 def test_reshaping():
     # Tests solvers.merge_first_dims
@@ -29,7 +135,7 @@ def test1():
         e=test_function(u_ex, f, p)
         # havent thought about the convergence rate here,
         # so just check if -> 0
-        assert e < e_prev/2 
+        assert e < e_prev/2
 
     def f(x): return 6*x + np.pi**2/4*np.sin(np.pi*x/2)
     def u_ex(x): return x**3 - np.sin(np.pi/2*x)
@@ -67,7 +173,7 @@ def abdullah_bug_test():
     fig2, axs2 = plt.subplots(3,2)
     for exponent in range(1,7):
         def u_ex(x): return x**exponent
-        def f(x): 
+        def f(x):
             if exponent <2:
                 return 0
             return exponent*(exponent-1)*x**(exponent-2)
@@ -153,6 +259,10 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
+    test_2d_heat()
+    quit()
+    test_fem_2d()
+    test_in_triangle()
     test_reshaping()
     test1()
     #abdullah_bug_test()
