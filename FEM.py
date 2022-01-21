@@ -2,6 +2,7 @@
 using lagrange polinomials as the basis function'''
 import numpy as np
 import quadrature
+import getplate
 from matplotlib import pyplot as plt, cm
 from utils import zero, length
 
@@ -318,7 +319,7 @@ class Fem_2d:
         #plt.savefig(f'../preproject/1d_heat_figures/sols/{sol}.pdf')
         plt.show()
 
-class Heat_2D(Fem_2d):
+class Heat_2d(Fem_2d):
     def __init__(self, pts, tri, edge, f, p=1, u_ex=None, k=None):
         '''With backwards euler, so on step is (M+kA)u_new = u_old + kf
 
@@ -413,3 +414,35 @@ class Heat_2D(Fem_2d):
             self.step(g)
             if callback!=None:
                 callback(self.time,self.u_fem)
+
+
+class Disc: # short for disctretizatoin
+
+    def __init__(self, T, time_steps, Ne, p=1, dim=1, xa=0, xb=1, ya=0, yb=1):
+        assert p==1 or dim==1
+        self.T=T
+        self.time_steps = time_steps
+        self.k = T/time_steps
+        self.p=p
+        self.dim=dim
+        
+        if dim == 1:
+            self.pts = np.linspace(xa,xb,Ne*p+1)
+            self.pts_fine = np.linspace(xa,xb,Ne*p*8+1)
+            self.edge_pts = [0,len(self.pts)-1]
+        elif dim == 2:
+            self.pts, self.tri, self.edge = getplate.getPlate(Ne+1)
+            self.pts_fine, self.tri_fine, self.edge_fine = getplate.getPlate(Ne*4+1)
+            self.edge_pts = self.edge[:,0]
+            assert (np.sort(self.edge[:,1]) == np.sort(self.edge_pts)).all() # control that all edge points are in first col of edge
+        else:
+            raise ValueError(f'Dimentionality dim={dim} is not implemented')
+        self.inner_pts = np.setdiff1d(np.arange(len(self.pts)), self.edge_pts)
+
+    def make_heat_model(self, f, u_ex=None):
+        if self.dim == 1:
+            return Heat(self.pts, f, p=self.p, u_ex=u_ex, k=self.k)
+        elif self.dim == 2:
+            assert self.p == 1
+            return Heat_2d(self.pts, self.tri, self.edge, f, p=self.p, u_ex=u_ex, k=self.k)
+        raise ValueError(f'Dimentionality dim={self.dim} is not implemented')

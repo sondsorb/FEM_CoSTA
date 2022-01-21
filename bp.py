@@ -103,12 +103,12 @@ t = sp.symbols('t')
 x = sp.symbols('x')
 y = sp.symbols('y')
 alpha = sp.symbols('alpha')
-u = sp.exp(-t/(2-x**2-(y-(1+alpha)/4)**2)) # TODO: calculate a realistic u more properly
+u = sp.exp(-t/(4-x**2-(y-(1+alpha)/4)**2)) # TODO: calculate a realistic u more properly
 
-f,u = functions.manufacture_solution(u,t,[x,y],alpha, d1=2, d2=1)
+f,u = functions.manufacture_solution(u,t,[x,y],alpha, d1=2, d2=2)
 sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'bp_tst1', time_delta=time_delta)
 
-model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, a=-1, b=1, NNkwargs=NNkwargs)
+model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=-1,ya=-1,dim=2, NNkwargs=NNkwargs)
 extra_tag = '' # for different names when testing specific stuff
 figname = None
 model_folder = None

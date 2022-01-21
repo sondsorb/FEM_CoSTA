@@ -106,19 +106,17 @@ def bottle_neck_NN():
 
 
 class DNN_solver:
-    def __init__(self, Np, pts, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
+    def __init__(self, disc, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'DNN'
-        self.Np = Np
-        self.pts = pts
-        self.T = T
-        self.time_steps = time_steps
+        self.disc = disc
+        self.Np = len(disc.pts)
         self.normalize =True#False
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
 
-        self.model = get_DNN(input_shape=(self.Np,), output_length = Np-2, **NNkwargs)
+        self.model = get_DNN(input_shape=(self.Np,), output_length = len(self.disc.inner_pts), **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
         data = merge_first_dims(data)
@@ -134,7 +132,7 @@ class DNN_solver:
         X = X/self.var**0.5
         Y = Y-self.Y_mean
         Y = Y/self.Y_var**0.5
-        X[:,1:-1] += np.random.rand(X.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
+        X[:,self.disc.inner_pts] += np.random.rand(X.shape[0],len(self.disc.inner_pts))*self.noise_level-self.noise_level/2
         return X,Y
 
     def train(self, train_data, val_data, weights_loaded=False):
@@ -172,20 +170,20 @@ class DNN_solver:
     def __call__(self, f, u_ex, alpha, callback=None):
         plot_steps=False
         X=np.zeros((1,self.Np))
-        u_NN = u_ex(self.pts, t=0)[1:-1]
-        k=self.T/self.time_steps
+        u_NN = u_ex(self.disc.pts[self.disc.inner_pts], t=0)
+        k=self.disc.k
         if plot_steps:
             plt.close()
-        for t in range(self.time_steps):
+        for t in range(self.disc.time_steps):
             u_prev = u_NN # save previous solution
-            X[:,1:self.Np-1] = u_prev
-            X[:,0]=u_ex(x=self.pts[0],t=t*k)
-            X[:,self.Np-1]=u_ex(x=self.pts[-1],t=t*k)
+            X[:,self.disc.inner_pts] = u_prev
+            for i in self.disc.edge_pts:
+                X[:,i]=u_ex(x=self.disc.pts[i],t=t*k)
             if plot_steps:
                 if t%10==4:
                     print(f'time is {t*k}')
-                    plt.plot(self.pts, X[0,:self.Np],'r', label='new')
-                    plt.plot(self.pts, u_ex(x=self.pts, t=t*k),'k--', label='ex')
+                    plt.plot(self.disc.pts, X[0,:self.Np],'r', label='new')
+                    plt.plot(self.disc.pts, u_ex(x=self.disc.pts, t=t*k),'k--', label='ex')
             X = (X-self.mean)/self.var**0.5 # normalize NN input
             u_NN = self.model(X)
             u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
@@ -197,26 +195,24 @@ class DNN_solver:
             #plt.legend()
             plt.show()
         result = np.zeros((self.Np))
-        result[1:self.Np-1] = u_NN
-        result[0] = u_ex(x=self.pts[0],t=self.T)
-        result[self.Np-1] = u_ex(x=self.pts[-1],t=self.T)
+        result[self.disc.inner_pts] = u_NN
+        for i in self.disc.edge_pts:
+            result[i] = u_ex(x=self.disc.pts[i],t=self.disc.T)
         return result
 
 
 class pgDNN_solver:
-    def __init__(self, Np, pts, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
+    def __init__(self, disc, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'pgDNN'
-        self.Np = Np
-        self.pts = pts
-        self.T = T
-        self.time_steps = time_steps
+        self.disc = disc
+        self.Np = len(disc.pts)
         self.normalize =True#False
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]]
         self.noise_level = noise_level
 
-        self.model = get_pgDNN(input_shape_1=(self.Np,), input_shape_2=(2,), output_length = Np-2, **NNkwargs)
+        self.model = get_pgDNN(input_shape_1=(self.Np,), input_shape_2=(2,), output_length = len(self.disc.inner_pts), **NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
         data_1 = merge_first_dims(data_1)
@@ -239,7 +235,7 @@ class pgDNN_solver:
         Y = Y/self.Y_var**0.5
         X2 = X2-self.X2_mean
         X2 = X2/self.X2_var**0.5
-        X1[:,1:-1] += np.random.rand(X1.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
+        X1[:,self.disc.inner_pts] += np.random.rand(X1.shape[0],len(self.disc.inner_pts))*self.noise_level-self.noise_level/2
         X = [X1,X2]
         return X,Y
 
@@ -277,13 +273,13 @@ class pgDNN_solver:
 
     def __call__(self, f, u_ex, alpha, callback=None):
         X1=np.zeros((self.Np))
-        u_NN = u_ex(self.pts, t=0)[1:-1]
-        k=self.T/self.time_steps
-        for t in range(self.time_steps):
+        u_NN = u_ex(self.disc.pts[self.disc.inner_pts], t=0)
+        k=self.disc.k
+        for t in range(self.disc.time_steps):
             u_prev = u_NN # save previous solution
-            X1[1:self.Np-1] = u_prev
-            X1[0]=u_ex(x=self.pts[0],t=t*k)
-            X1[self.Np-1]=u_ex(x=self.pts[-1],t=t*k)
+            X1[self.disc.inner_pts] = u_prev
+            for i in self.disc.edge_pts:
+                X1[i]=u_ex(x=self.disc.pts[i],t=t*k)
             X2 = np.array([alpha,(t+1)*k])
             X1 = (X1-self.mean)/self.var**0.5 # normalize NN input
             X2 = (X2-self.X2_mean)/self.X2_var**0.5 # normalize NN input
@@ -294,19 +290,17 @@ class pgDNN_solver:
             if callback!=None:
                 callback((t+1)*k,u_NN)
         result = np.zeros((self.Np))
-        result[1:self.Np-1] = u_NN
-        result[0] = u_ex(x=self.pts[0],t=self.T)
-        result[self.Np-1] = u_ex(x=self.pts[-1],t=self.T)
+        result[self.disc.inner_pts] = u_NN
+        for i in self.disc.edge_pts:
+            result[i] = u_ex(x=self.disc.pts[i],t=self.disc.T)
         return result
 
 
 class LSTM_solver:
-    def __init__(self, Np, pts, T, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, input_period=10, **NNkwargs):
+    def __init__(self, disc, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, input_period=10, **NNkwargs):
         self.name = 'LSTM'
-        self.Np = Np
-        self.pts = pts
-        self.T = T
-        self.time_steps = time_steps
+        self.disc = disc
+        self.Np = len(disc.pts)
         self.normalize =True#False
         self.epochs = epochs
         self.patience = patience
@@ -314,7 +308,7 @@ class LSTM_solver:
         self.noise_level = noise_level
         self.input_period = input_period
 
-        self.model = get_LSTM(input_shape=(self.input_period, self.Np,), output_length = Np-2, **NNkwargs)
+        self.model = get_LSTM(input_shape=(self.input_period, self.Np,), output_length = len(self.disc.inner_pts), **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
 
@@ -341,7 +335,7 @@ class LSTM_solver:
         X = X/self.var**0.5
         Y = Y-self.Y_mean
         Y = Y/self.Y_var**0.5
-        X[:,:,1:-1] += np.random.rand(X.shape[0],l,self.Np-2)*self.noise_level-self.noise_level/2
+        X[:,:,self.disc.inner_pts] += np.random.rand(X.shape[0],l,len(self.disc.inner_pts))*self.noise_level-self.noise_level/2
         return X,Y
 
     def train(self, train_data, val_data, weights_loaded=False):
@@ -379,17 +373,17 @@ class LSTM_solver:
     def __call__(self, f, u_ex, alpha, callback=None):
         l=self.input_period
         X=np.zeros((1,l, self.Np))
-        k=self.T/self.time_steps
+        k=self.disc.k
         for t in range(1,l+1):
-            X[:,l-t,:] = u_ex(self.pts, t=-t*k) # TODO: find a porper way to do this (backward exxtrapolation not always possible
+            X[:,l-t,:] = u_ex(self.disc.pts, t=-t*k) # TODO: find a porper way to do this (backward exxtrapolation not always possible
         X = (X-self.mean)/self.var**0.5 # normalize NN input (only last entry)
-        u_NN = u_ex(self.pts, t=0)[1:-1]
-        for t in range(self.time_steps):
+        u_NN = u_ex(self.disc.pts[self.disc.inner_pts], t=0)
+        for t in range(self.disc.time_steps):
             X[:,:-1,:] = X[:,1:,:] # move input data one step forward
             u_prev = u_NN # save previous solution
-            X[:,-1:,1:self.Np-1] = u_prev
-            X[:,-1,0]=u_ex(x=self.pts[0],t=t*k)
-            X[:,-1,-1]=u_ex(x=self.pts[-1],t=t*k)
+            X[:,-1:,self.disc.inner_pts] = u_prev
+            for i in self.disc.edge_pts:
+                X[:,-1,i]=u_ex(x=self.disc.pts[i],t=t*k)
             X[:,-1,:] = (X[:,-1,:]-self.mean)/self.var**0.5 # normalize NN input (only last entry)
             u_NN = self.model(X)
             u_NN = u_NN *self.Y_var**0.5 # unnormalize NN output
@@ -397,26 +391,23 @@ class LSTM_solver:
             if callback!=None:
                 callback((t+1)*k,u_NN)
         result = np.zeros((self.Np))
-        result[1:self.Np-1] = u_NN
-        result[0] = u_ex(x=self.pts[0],t=self.T)
-        result[self.Np-1] = u_ex(x=self.pts[-1],t=self.T)
+        result[self.disc.inner_pts] = u_NN
+        for i in self.disc.edge_pts:
+            result[i] = u_ex(x=self.disc.pts[i],t=self.disc.T)
         return result
 
 class CoSTA_DNN_solver:
-    def __init__(self, Np, T, p, pts, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
+    def __init__(self, disc, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'CoSTA_DNN'
-        self.Np = Np
-        self.p = p
-        self.T = T
-        self.pts = pts
-        self.time_steps = time_steps
+        self.disc = disc
+        self.Np = len(disc.pts)
         self.normalize =True#False
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
 
-        self.model = get_DNN(input_shape=(self.Np,), output_length = Np-2, **NNkwargs)
+        self.model = get_DNN(input_shape=(self.Np,), output_length = len(self.disc.inner_pts), **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
         data = merge_first_dims(data)
@@ -432,7 +423,7 @@ class CoSTA_DNN_solver:
         X = X/self.var**0.5
         Y = Y-self.Y_mean
         Y = Y/self.Y_var**0.5
-        X[:,1:-1] += np.random.rand(X.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
+        X[:,self.disc.inner_pts] += np.random.rand(X.shape[0],len(self.disc.inner_pts))*self.noise_level-self.noise_level/2
         return X,Y
 
     def train(self, train_data, val_data, weights_loaded=False):
@@ -469,18 +460,18 @@ class CoSTA_DNN_solver:
     def __call__(self, f, u_ex, alpha, callback=None):
         X=np.zeros((1,self.Np))
 
-        fem_model = FEM.Heat(self.pts, f, self.p, u_ex, k=self.T/self.time_steps)
+        fem_model = self.disc.make_heat_model(f, u_ex)
         fem_model.u_fem =fem_model.u_ex(fem_model.pts, t=fem_model.time)
-        for t in range(self.time_steps):
+        for t in range(self.disc.time_steps):
             u_prev = fem_model.u_fem # save previous solution
             fem_model.step() # first, uncorrected, step
             fem_step = fem_model.u_fem
             X[:,:self.Np] = fem_step
             X = (X-self.mean)/self.var**0.5
             correction = np.zeros(self.Np)
-            correction[1:-1] = self.model(X)[0,:]
-            correction[1:-1] = correction[1:-1]*self.Y_var**0.5
-            correction[1:-1] = correction[1:-1] + self.Y_mean
+            correction[self.disc.inner_pts] = self.model(X)[0,:]
+            correction[self.disc.inner_pts] = correction[self.disc.inner_pts]*self.Y_var**0.5
+            correction[self.disc.inner_pts] = correction[self.disc.inner_pts] + self.Y_mean
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
@@ -490,20 +481,17 @@ class CoSTA_DNN_solver:
 
 
 class CoSTA_pgDNN_solver:
-    def __init__(self, Np, T, p, pts, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
+    def __init__(self, disc, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, **NNkwargs):
         self.name = 'CoSTA_pgDNN'
-        self.Np = Np
-        self.p = p
-        self.T = T
-        self.pts = pts
-        self.time_steps = time_steps
+        self.disc = disc
+        self.Np = len(disc.pts)
         self.normalize =True#False
         self.epochs = epochs
         self.patience = patience
         self.min_epochs = [max(min_epochs[i], patience[i]+2) for i in [0,1]] # assert min_epochs > patience
         self.noise_level = noise_level
 
-        self.model = get_pgDNN(input_shape_1=(self.Np,), input_shape_2=(2,), output_length = Np-2, **NNkwargs)
+        self.model = get_pgDNN(input_shape_1=(self.Np,), input_shape_2=(2,), output_length = len(self.disc.inner_pts), **NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
         data_1 = merge_first_dims(data_1)
@@ -526,7 +514,7 @@ class CoSTA_pgDNN_solver:
         Y = Y/self.Y_var**0.5
         X2 = X2-self.X2_mean
         X2 = X2/self.X2_var**0.5
-        X1[:,1:-1] += np.random.rand(X1.shape[0],self.Np-2)*self.noise_level-self.noise_level/2
+        X1[:,self.disc.inner_pts] += np.random.rand(X1.shape[0],len(self.disc.inner_pts))*self.noise_level-self.noise_level/2
         X = [X1,X2]
         return X,Y
 
@@ -565,9 +553,9 @@ class CoSTA_pgDNN_solver:
     def __call__(self, f, u_ex, alpha, callback=None):
         X1=np.zeros((self.Np))
 
-        fem_model = FEM.Heat(self.pts, f, self.p, u_ex, k=self.T/self.time_steps)
+        fem_model = self.disc.make_heat_model(f, u_ex)
         fem_model.u_fem =fem_model.u_ex(fem_model.pts, t=fem_model.time)
-        for t in range(self.time_steps):
+        for t in range(self.disc.time_steps):
             u_prev = fem_model.u_fem # save previous solution
             fem_model.step() # first, uncorrected, step
             fem_step = fem_model.u_fem
@@ -577,9 +565,9 @@ class CoSTA_pgDNN_solver:
             X2 = (X2-self.X2_mean)/self.X2_var**0.5
             model_input = [np.array([X1]), np.array([X2])]
             correction = np.zeros(self.Np)
-            correction[1:-1] = self.model(model_input)[0,:]
-            correction[1:-1] = correction[1:-1]*self.Y_var**0.5
-            correction[1:-1] = correction[1:-1] + self.Y_mean
+            correction[self.disc.inner_pts] = self.model(model_input)[0,:]
+            correction[self.disc.inner_pts] = correction[self.disc.inner_pts]*self.Y_var**0.5
+            correction[self.disc.inner_pts] = correction[self.disc.inner_pts] + self.Y_mean
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
@@ -589,13 +577,10 @@ class CoSTA_pgDNN_solver:
 
 
 class CoSTA_LSTM_solver:
-    def __init__(self, Np, T, p, pts, time_steps, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, input_period=10, **NNkwargs):
+    def __init__(self, disc, epochs=[5000,5000], patience=[20,20], min_epochs=[20,20], noise_level=0, input_period=10, **NNkwargs):
         self.name = 'CoSTA_LSTM'
-        self.Np = Np
-        self.p = p
-        self.T = T
-        self.pts = pts
-        self.time_steps = time_steps
+        self.disc = disc
+        self.Np = len(disc.pts)
         self.normalize =True#False
         self.epochs = epochs
         self.patience = patience
@@ -603,7 +588,7 @@ class CoSTA_LSTM_solver:
         self.noise_level = noise_level
         self.input_period = input_period
 
-        self.model = get_LSTM(input_shape=(self.input_period, self.Np,), output_length = Np-2, **NNkwargs)
+        self.model = get_LSTM(input_shape=(self.input_period, self.Np,), output_length = len(self.disc.inner_pts), **NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
 
@@ -630,7 +615,7 @@ class CoSTA_LSTM_solver:
         X = X/self.var**0.5
         Y = Y-self.Y_mean
         Y = Y/self.Y_var**0.5
-        X[:,:,1:-1] += np.random.rand(X.shape[0],l,self.Np-2)*self.noise_level-self.noise_level/2
+        X[:,:,self.disc.inner_pts] += np.random.rand(X.shape[0],l,len(self.disc.inner_pts))*self.noise_level-self.noise_level/2
         return X,Y
 
     def train(self, train_data, val_data, weights_loaded=False):
@@ -667,15 +652,15 @@ class CoSTA_LSTM_solver:
     def __call__(self, f, u_ex, alpha, callback=None):
         l=self.input_period
         X=np.zeros((1,l, self.Np))
-        k=self.T/self.time_steps
-        X[:,0,:] = u_ex(self.pts, t=0)
+        k=self.disc.k
+        X[:,0,:] = u_ex(self.disc.pts, t=0)
 
         # Define fem model
-        fem_model = FEM.Heat(self.pts, f, self.p, u_ex, k=self.T/self.time_steps)
+        fem_model = self.disc.make_heat_model(f, u_ex)
 
         # Calculate initial input vector
         for t in range(1,l+1):
-            fem_model.u_fem = u_ex(self.pts, t=-t*k) # TODO: find a porper way to do this (backward exxtrapolation not always possible
+            fem_model.u_fem = u_ex(self.disc.pts, t=-t*k) # TODO: find a porper way to do this (backward exxtrapolation not always possible
             fem_model.time = -t*k
             fem_model.step() # make one step from exact solution (as the LSTM model is trained on)
             X[:,l-t,:] = fem_model.u_fem
@@ -685,7 +670,7 @@ class CoSTA_LSTM_solver:
         fem_model.time = 0
         fem_model.u_fem =fem_model.u_ex(fem_model.pts, t=fem_model.time)
 
-        for t in range(self.time_steps):
+        for t in range(self.disc.time_steps):
             X[:,:-1,:] = X[:,1:,:] # move input data one step forward
             u_prev = fem_model.u_fem # save previous solution
             fem_model.step() # first, uncorrected, step
@@ -693,9 +678,9 @@ class CoSTA_LSTM_solver:
             X[:,-1:,:self.Np] = fem_step
             X[:,-1,:] = (X[:,-1,:]-self.mean)/self.var**0.5 # normalize NN input (only last entry)
             correction = np.zeros(self.Np)
-            correction[1:-1] = self.model(X)[0,:]
-            correction[1:-1] = correction[1:-1]*self.Y_var**0.5
-            correction[1:-1] = correction[1:-1] + self.Y_mean
+            correction[self.disc.inner_pts] = self.model(X)[0,:]
+            correction[self.disc.inner_pts] = correction[self.disc.inner_pts]*self.Y_var**0.5
+            correction[self.disc.inner_pts] = correction[self.disc.inner_pts] + self.Y_mean
             fem_model.u_fem = u_prev
             fem_model.time -= fem_model.k # set back time for correction
             fem_model.step(correction=correction) # corrected step
@@ -708,7 +693,7 @@ class CoSTA_LSTM_solver:
 ###   Solver class compares the different solvers defined above   ###
 #####################################################################
 class Solvers:
-    def __init__(self, sol, models=None, modelnames=None, Ne=10, time_steps=20, p=1, a=0, b=1, NNkwargs={}):
+    def __init__(self, sol, models=None, modelnames=None, Ne=10, time_steps=20, p=1, xa=0, xb=1, ya=0, yb=1, dim=1, NNkwargs={}):
         '''
         either models or modelnames must be specified, not both
         models - list of models
@@ -718,14 +703,18 @@ class Solvers:
         assert models != None or modelnames != None
 
         self.sol = sol # solution
-        self.Ne = Ne
-        self.p = p
-        self.T = sol.T
-        self.Np = Ne*p+1
-        self.pts = np.linspace(a,b,self.Np)
-        self.a=a
-        self.b=b
-        self.time_steps = time_steps
+        self.disc = FEM.Disc(
+                T=sol.T, 
+                time_steps=time_steps, 
+                Ne=Ne,
+                p=p,
+                dim=dim,
+                xa=xa,
+                xb=xb,
+                ya=ya,
+                yb=yb
+                )
+        self.Np = len(self.disc.pts)
         self.alpha_train = [.1,.2,.3,.4,.5,.6,.9,1,1.2,1.3,1.4,1.6,1.7,1.8,1.9,2]
         self.alpha_val = [.8,1.1]#, 1,8, 0.4]
         self.alpha_test_interpol = [.7,1.5]
@@ -738,19 +727,17 @@ class Solvers:
             for modelname in modelnames:
                 for i in range(modelnames[modelname]):
                     if modelname == 'DNN':
-                        self.models.append(DNN_solver(T=self.T, pts=self.pts, time_steps=time_steps, Np=self.Np, **(NNkwargs[modelname])))
+                        self.models.append(DNN_solver(disc=self.disc, **(NNkwargs[modelname])))
                     elif modelname == 'pgDNN':
-                        self.models.append(pgDNN_solver(T=self.T, pts=self.pts, time_steps=time_steps, Np=self.Np, **(NNkwargs[modelname])))
+                        self.models.append(pgDNN_solver(disc=self.disc, **(NNkwargs[modelname])))
                     elif modelname == 'LSTM':
-                        self.models.append(LSTM_solver(T=self.T, pts=self.pts, time_steps=time_steps, Np=self.Np, **(NNkwargs[modelname])))
+                        self.models.append(LSTM_solver(disc=self.disc, **(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_DNN':
-                        self.models.append(CoSTA_DNN_solver(p=p, T=self.T, Np=self.Np, pts=self.pts, time_steps=time_steps,**(NNkwargs[modelname])))
+                        self.models.append(CoSTA_DNN_solver(disc=self.disc,**(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_pgDNN':
-                        self.models.append(CoSTA_pgDNN_solver(p=p, T=self.T, Np=self.Np, pts=self.pts, time_steps=time_steps,**(NNkwargs[modelname])))
-                        #self.models[-1].model.summary() #TODO delete this stuff
-                        #quit()
+                        self.models.append(CoSTA_pgDNN_solver(disc=self.disc,**(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_LSTM':
-                        self.models.append(CoSTA_LSTM_solver(p=p, T=self.T, Np=self.Np, pts=self.pts, time_steps=time_steps, **(NNkwargs[modelname])))
+                        self.models.append(CoSTA_LSTM_solver(disc=self.disc, **(NNkwargs[modelname])))
                     else:
                         print(f'WARNING!!!! model named {modelname} not implemented')
 
@@ -763,24 +750,20 @@ class Solvers:
                 else:
                     self.modelnames[model.name] = 1
 
-        #for model in self.models:
-        #    model.model.summary()
-        #quit()
-
         self.create_data()
 
 
 
     def __data_set(self,alphas, silence=False):
-        ham_data=np.zeros((self.time_steps,len(alphas),self.Np + self.Np - 2)) # data for ham NN model
-        pnn_data=np.zeros((self.time_steps,len(alphas),self.Np + self.Np - 2)) # data for pure NN model
-        extra_feats=np.zeros((self.time_steps,len(alphas),2)) # alpha and time
+        ham_data=np.zeros((self.disc.time_steps,len(alphas),self.Np + self.Np - len(self.disc.edge_pts))) # data for ham NN model
+        pnn_data=np.zeros((self.disc.time_steps,len(alphas),self.Np + self.Np - len(self.disc.edge_pts))) # data for pure NN model
+        extra_feats=np.zeros((self.disc.time_steps,len(alphas),2)) # alpha and time
         for i, alpha in enumerate(alphas):
             if not silence:
                 print(f'--- making data set for alpha {alpha} ---')
             self.sol.set_alpha(alpha)
-            fem_model = FEM.Heat(self.pts, self.sol.f, self.p, self.sol.u, k=self.T/self.time_steps)
-            for t in range(self.time_steps):
+            fem_model = self.disc.make_heat_model(self.sol.f, self.sol.u)
+            for t in range(self.disc.time_steps):
                 ex_step = fem_model.u_ex(fem_model.pts, t=fem_model.time) # exact solution before step
                 pnn_data[t,i,:self.Np] = ex_step
                 fem_model.u_fem = ex_step # Use u_ex as u_prev
@@ -790,8 +773,8 @@ class Solvers:
                 extra_feats[t,i,1] = fem_model.time
                 ex_step = fem_model.u_ex(fem_model.pts, t=fem_model.time) # exact solution after step
                 error = ex_step - fem_model.u_fem
-                pnn_data[t,i, self.Np:] = ex_step[1:-1]
-                ham_data[t,i, self.Np:] = (fem_model.MA @ error)[1:-1] # residual
+                pnn_data[t,i, self.Np:] = ex_step[self.disc.inner_pts]
+                ham_data[t,i, self.Np:] = (fem_model.MA @ error)[self.disc.inner_pts] # residual
         return {'ham':ham_data, 'pnn':pnn_data, 'extra_feats':extra_feats}
 
 
@@ -807,7 +790,7 @@ class Solvers:
 
     def load_weights(self, model_folder):
         for j, model in enumerate(self.models):
-            model.model.load_weights(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}')
+            model.model.load_weights(model_folder+f'{j}_{model.name}_{self.disc.time_steps}_{self.sol.name}')
             model.train(self.train_data, self.val_data, True) # For setting mean/var, it wont fit the model
         print('model weights loaded')
 
@@ -824,7 +807,7 @@ class Solvers:
             model_start_time = datetime.datetime.now()
             model.train(self.train_data, self.val_data)
             if model_folder != None:
-                model.model.save_weights(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}')
+                model.model.save_weights(model_folder+f'{j}_{model.name}_{self.disc.time_steps}_{self.sol.name}')
             print(f'\nTime training model "{model.name}": {datetime.datetime.now()-model_start_time}')
 
             # plot history
@@ -844,7 +827,7 @@ class Solvers:
 
             if model_folder != None:
                 # save history json file
-                with open(model_folder+f'{j}_{model.name}_{self.time_steps}_{self.sol.name}.json', "w") as f:
+                with open(model_folder+f'{j}_{model.name}_{self.disc.time_steps}_{self.sol.name}.json', "w") as f:
                     f.write(json.dumps({
                         'train':model.train_hist, 
                         'val':model.val_hist
@@ -868,50 +851,50 @@ class Solvers:
         #if plot_one_step_sources:
         #    # Plot some source terms
         #    for t in range(3):
-        #        plt.plot(self.pts[1:-1], Y[t], 'k',  label='exact source')
+        #        plt.plot(self.disc.pts[self.disc.inner_pts], Y[t], 'k',  label='exact source')
         #        for model in self.hamNNs:
-        #            plt.plot(self.pts[1:-1], model(np.array([X[t]]))[0], 'r--',  label='ham source')
+        #            plt.plot(self.disc.pts[self.disc.inner_pts], model(np.array([X[t]]))[0], 'r--',  label='ham source')
         #        plt.legend(title='trainset')
         #        plt.grid()
         #        plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_train_{t}.pdf')
         #        plt.show()
 
-        #        plt.plot(self.pts[1:-1], Y_val[t], 'k',  label='exact source')
+        #        plt.plot(self.disc.pts[self.disc.inner_pts], Y_val[t], 'k',  label='exact source')
         #        for model in self.hamNNs:
-        #            plt.plot(self.pts[1:-1], model(np.array([X_val[t]]))[0], 'r--',  label='ham source')
+        #            plt.plot(self.disc.pts[self.disc.inner_pts], model(np.array([X_val[t]]))[0], 'r--',  label='ham source')
         #        plt.legend(title='valset')
         #        plt.grid()
         #        plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_val_{t}.pdf')
         #        plt.show()
 
-        #        plt.plot(self.pts[1:-1], Y_test[t], 'k',  label='exact source')
+        #        plt.plot(self.disc.pts[self.disc.inner_pts], Y_test[t], 'k',  label='exact source')
         #        for model in self.hamNNs:
-        #            plt.plot(self.pts[1:-1], model(np.array([X_test[t]]))[0], 'r--',  label='ham source')
+        #            plt.plot(self.disc.pts[self.disc.inner_pts], model(np.array([X_test[t]]))[0], 'r--',  label='ham source')
         #        plt.legend(title='testset')
         #        plt.grid()
         #        plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_source_test_{t}.pdf')
         #        plt.show()
 
         #        # PNN
-        #        plt.plot(self.pts[1:-1], pnnY[t], 'k',  label='exact temp')
+        #        plt.plot(self.disc.pts[self.disc.inner_pts], pnnY[t], 'k',  label='exact temp')
         #        for model in self.pureNNs:
-        #            plt.plot(self.pts[1:-1], model(np.array([pnnX[t]]))[0], 'r--',  label='pnn temp')
+        #            plt.plot(self.disc.pts[self.disc.inner_pts], model(np.array([pnnX[t]]))[0], 'r--',  label='pnn temp')
         #        plt.legend(title='trainset')
         #        plt.grid()
         #        plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_train_{t}.pdf')
         #        plt.show()
 
-        #        plt.plot(self.pts[1:-1], pnnY_val[t], 'k',  label='exact temp')
+        #        plt.plot(self.disc.pts[self.disc.inner_pts], pnnY_val[t], 'k',  label='exact temp')
         #        for model in self.pureNNs:
-        #            plt.plot(self.pts[1:-1], model(np.array([pnnX_val[t]]))[0], 'r--',  label='pnn temp')
+        #            plt.plot(self.disc.pts[self.disc.inner_pts], model(np.array([pnnX_val[t]]))[0], 'r--',  label='pnn temp')
         #        plt.legend(title='valset')
         #        plt.grid()
         #        plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_val_{t}.pdf')
         #        plt.show()
 
-        #        plt.plot(self.pts[1:-1], pnnY_test[t], 'k',  label='exact temp')
+        #        plt.plot(self.disc.pts[self.disc.inner_pts], pnnY_test[t], 'k',  label='exact temp')
         #        for model in self.pureNNs:
-        #            plt.plot(self.pts[1:-1], model(np.array([pnnX_test[t]]))[0], 'r--',  label='pnn temp')
+        #            plt.plot(self.disc.pts[self.disc.inner_pts], model(np.array([pnnX_test[t]]))[0], 'r--',  label='pnn temp')
         #        plt.legend(title='testset')
         #        plt.grid()
         #        plt.savefig(f'../preproject/1d_heat_figures/{self.sol}_temp_test_{t}.pdf')
@@ -939,27 +922,25 @@ class Solvers:
             self.sol.set_alpha(alpha)
 
             # Define callback function to store L2 error development
-            fem_frame = FEM.Fem_1d(self.pts[1:-1], self.sol.f, self.p, self.sol.u)
+            fem_frame = FEM.Fem_1d(self.disc.pts[self.disc.inner_pts], self.sol.f, self.disc.p, self.sol.u)
             def relative_L2_callback(t, u_approx):
-                fem_frame.u_fem = u_approx[1:-1] if len(u_approx)==self.Np else u_approx[0,:]
+                fem_frame.u_fem = u_approx[self.disc.inner_pts] if len(u_approx)==self.Np else u_approx[0,:]
                 #self.L2_development.append( fem_frame.relative_L2() )
 
                 # Drop L2, use l2 instead (for now..?) TODO fix this mess
-                self.L2_development.append(np.sqrt(np.mean((fem_frame.u_fem-fem_frame.u_ex(self.pts[1:-1],t))**2)) / np.sqrt(np.mean(fem_frame.u_ex(self.pts[1:-1],t)**2)))
+                self.L2_development.append(np.sqrt(np.mean((fem_frame.u_fem-fem_frame.u_ex(self.disc.pts[self.disc.inner_pts],t))**2)) / np.sqrt(np.mean(fem_frame.u_ex(self.disc.pts[self.disc.inner_pts],t)**2)))
 
             # Solve with FEM
             self.L2_development = []
-            fem_model = FEM.Heat(self.pts, self.sol.f, self.p, self.sol.u, k=self.T/self.time_steps)
-            fem_model.solve(self.time_steps, T = self.T, callback = relative_L2_callback)
-            pts_fine = np.linspace(self.a,self.b,self.Ne*self.p*8+1)
-            #axs[i].plot(pts_fine, fem_model.solution(pts_fine), 'b', label='fem')
-            axs[i].plot(pts_fine, fem_model.solution(pts_fine), color=COLORS['FEM'], label='fem')
+            fem_model = self.disc.make_heat_model(self.sol.f, self.sol.u)
+            fem_model.solve(self.disc.time_steps, T = self.disc.T, callback = relative_L2_callback)
+            axs[i].plot(self.disc.pts_fine, fem_model.solution(self.disc.pts_fine), color=COLORS['FEM'], label='fem')
 
             # prepare plotting
             prev_name = ''
             graphs = {}
             L2_scores = {'FEM' : [fem_model.relative_L2()]}
-            def rel_l2() : return np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.pts,self.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.pts,self.T)**2))
+            def rel_l2() : return np.sqrt(np.mean((fem_model.u_fem-fem_model.u_ex(self.disc.pts,self.disc.T))**2)) / np.sqrt(np.mean(fem_model.u_ex(self.disc.pts,self.disc.T)**2))
             l2_scores = {'FEM' : [rel_l2()]}
             L2_devs[alpha]= {'FEM' : [self.L2_development]}
             
@@ -975,11 +956,11 @@ class Solvers:
                         l2_scores[model.name] = []
                         L2_devs[alpha][model.name] = []
                         if not statplot:
-                            axs[i].plot(pts_fine, fem_model.solution(pts_fine), color=COLORS[model.name], label=model.name)
+                            axs[i].plot(self.disc.pts_fine, fem_model.solution(self.disc.pts_fine), color=COLORS[model.name], label=model.name)
                     else:
                         if not statplot:
-                            axs[i].plot(pts_fine, fem_model.solution(pts_fine), color=COLORS[model.name])
-                    graphs[model.name].append(fem_model.solution(pts_fine))
+                            axs[i].plot(self.disc.pts_fine, fem_model.solution(self.disc.pts_fine), color=COLORS[model.name])
+                    graphs[model.name].append(fem_model.solution(self.disc.pts_fine))
                     L2_scores[model.name].append(fem_model.relative_L2())
                     l2_scores[model.name].append(rel_l2())
                     L2_devs[alpha][model.name].append(self.L2_development)
@@ -989,9 +970,9 @@ class Solvers:
                     curr_graphs = np.array(graphs[name])
                     mean = np.mean(curr_graphs, axis=0)
                     std = np.std(curr_graphs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
-                    axs[i].plot(pts_fine, mean, color=COLORS[name])
-                    axs[i].fill_between(pts_fine, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
-            axs[i].plot(pts_fine, self.sol.u(pts_fine), 'k--', label='exact')
+                    axs[i].plot(self.disc.pts_fine, mean, color=COLORS[name])
+                    axs[i].fill_between(self.disc.pts_fine, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
+            axs[i].plot(self.disc.pts_fine, self.sol.u(self.disc.pts_fine), 'k--', label='exact')
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
