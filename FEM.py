@@ -1,6 +1,8 @@
 '''This file contains functions used in the finite element method,
 using lagrange polinomials as the basis function'''
 import numpy as np
+import scipy.sparse as spsp
+import scipy.sparse.linalg as spla
 import quadrature
 import getplate
 from matplotlib import pyplot as plt, cm
@@ -396,7 +398,8 @@ class Heat_2d(Fem_2d):
         self.M = M
         self.MA = M+A*self.k
         self.__add_Dirichlet_bdry(g=g)
-        self.u_fem = np.linalg.solve(self.MA, M@u_prev+self.F*self.k+correction) #Solve system
+        self.u_fem = spla.spsolve(spsp.csr_matrix(self.MA), M@u_prev+self.F*self.k+correction) #Solve system
+        #self.u_fem = np.linalg.solve(self.MA, M@u_prev+self.F*self.k+correction) #Solve system
 
 
     def solve(self, time_steps, u0=None, g=None, T=1, callback=None):
