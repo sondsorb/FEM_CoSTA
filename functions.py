@@ -76,9 +76,11 @@ def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
     f = u.diff(t_var)
     for d in range(d1):
         f -= u.diff(x_vars[d], x_vars[d])
+    print('f:', f)
     f_temp = lambdify([*[x_vars],t_var,alpha_var],f, "numpy")
     u_temp = lambdify([*[x_vars],t_var,alpha_var],u, "numpy")
     def f(x,t,alpha,time_delta=0):
+        x = [x] if length(x) == 0 else x
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     def u(x,t,alpha,time_delta=0):
         if length(x)>d2: # if x is a list, and not a single point, we unpack recursively

@@ -934,7 +934,10 @@ class Solvers:
             self.L2_development = []
             fem_model = self.disc.make_heat_model(self.sol.f, self.sol.u)
             fem_model.solve(self.disc.time_steps, T = self.disc.T, callback = relative_L2_callback)
-            axs[i].plot(self.disc.pts_fine, fem_model.solution(self.disc.pts_fine), color=COLORS['FEM'], label='fem')
+            if self.disc.dim==1:
+                axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
+            if self.disc.dim==2:
+                axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
 
             # prepare plotting
             prev_name = ''
@@ -956,11 +959,17 @@ class Solvers:
                         l2_scores[model.name] = []
                         L2_devs[alpha][model.name] = []
                         if not statplot:
-                            axs[i].plot(self.disc.pts_fine, fem_model.solution(self.disc.pts_fine), color=COLORS[model.name], label=model.name)
+                            if self.disc.dim==1:
+                                axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS[model.name], label=model.name)
+                            if self.disc.dim==2:
+                                axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS[model.name], label=model.name)
                     else:
                         if not statplot:
-                            axs[i].plot(self.disc.pts_fine, fem_model.solution(self.disc.pts_fine), color=COLORS[model.name])
-                    graphs[model.name].append(fem_model.solution(self.disc.pts_fine))
+                            if self.disc.dim==1:
+                                axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS[model.name])
+                            if self.disc.dim==2:
+                                axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS[model.name])
+                    graphs[model.name].append(fem_model.solution(self.disc.pts_line))
                     L2_scores[model.name].append(fem_model.relative_L2())
                     l2_scores[model.name].append(rel_l2())
                     L2_devs[alpha][model.name].append(self.L2_development)
@@ -970,16 +979,23 @@ class Solvers:
                     curr_graphs = np.array(graphs[name])
                     mean = np.mean(curr_graphs, axis=0)
                     std = np.std(curr_graphs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
-                    axs[i].plot(self.disc.pts_fine, mean, color=COLORS[name])
-                    axs[i].fill_between(self.disc.pts_fine, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
-            axs[i].plot(self.disc.pts_fine, self.sol.u(self.disc.pts_fine), 'k--', label='exact')
+                    if self.disc.dim==1:
+                        axs[i].plot(self.disc.pts_line, mean, color=COLORS[name])
+                        axs[i].fill_between(self.disc.pts_line, mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
+                    if self.disc.dim==2:
+                        axs[i].plot(self.disc.pts_line[:,0], mean, color=COLORS[name])
+                        axs[i].fill_between(self.disc.pts_line[:,0], mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
+            if self.disc.dim==1:
+                axs[i].plot(self.disc.pts_line, self.sol.u(self.disc.pts_line), 'k--', label='exact')
+            if self.disc.dim==2:
+                axs[i].plot(self.disc.pts_line[:,0], self.sol.u(self.disc.pts_line), 'k--', label='exact')
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
         print(f'\nTime testing: {datetime.datetime.now()-start_time}')
         plt.tight_layout()
         if figname != None:
             plt.savefig(figname)
-        if self.plot:
+        if self.plot:# and self.disc.dim==1:
             plt.show()
         else:
             plt.close()
@@ -1000,7 +1016,7 @@ class Solvers:
                         axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name], label=name)
 
                 axs[i].grid()
-                #axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+                axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
             plt.tight_layout()
             if figname != None:

@@ -427,14 +427,17 @@ class Disc: # short for disctretizatoin
         self.dim=dim
         
         if dim == 1:
-            self.pts = np.linspace(xa,xb,Ne*p+1)
+            self.pts = np.linspace(xa,xb,Ne*p+1) # Note Ne is in each dimension (for now at least)
             self.pts_fine = np.linspace(xa,xb,Ne*p*8+1)
             self.edge_pts = [0,len(self.pts)-1]
+            self.pts_line = self.pts_fine
         elif dim == 2:
             self.pts, self.tri, self.edge = getplate.getPlate(Ne+1)
             self.pts_fine, self.tri_fine, self.edge_fine = getplate.getPlate(Ne*4+1)
             self.edge_pts = self.edge[:,0]
             assert (np.sort(self.edge[:,1]) == np.sort(self.edge_pts)).all() # control that all edge points are in first col of edge
+            self.pts_line = np.zeros((Ne*p*8+1, 2))
+            self.pts_line[:,0] = np.linspace(xa,xb,Ne*p*8+1)
         else:
             raise ValueError(f'Dimentionality dim={dim} is not implemented')
         self.inner_pts = np.setdiff1d(np.arange(len(self.pts)), self.edge_pts)
