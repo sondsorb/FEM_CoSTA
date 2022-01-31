@@ -87,7 +87,7 @@ modelnames = {
         #'pgDNN' : NoM,
         #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
-        'CoSTA_pgDNN' : NoM,
+        #'CoSTA_pgDNN' : NoM,
         #'CoSTA_LSTM' : NoM,
         }
 NNkwargs = {

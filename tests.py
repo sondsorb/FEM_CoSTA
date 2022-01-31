@@ -9,6 +9,28 @@ import getplate
 import sympy as sp
 import utils
 
+def test_2d_elast():
+    nu=0.5
+    def u_ex(x, t=1):
+        if len(np.array(x).shape)>1:
+            return (np.array([u_ex(xi,t) for xi in x]))
+        res = (x[0]**2-1)*(x[1]**2-1)
+        return [res,res]
+    def f(x,t):
+        if len(np.array(x).shape)>1:
+            return (np.array([f(xi,t) for xi in x]))
+        f1 = 1/(1-nu**2) * (-2*x[1]**2-x[0]**2+nu*x[0]**2-2*nu*x[0]*x[1]-2*x[0]*x[1]+3-nu)
+        f2 = 1/(1-nu**2) * (-2*x[0]**2-x[1]**2+nu*x[1]**2-2*nu*x[0]*x[1]-2*x[0]*x[1]+3-nu)
+        return [f1,f2]
+    
+    for n in [3, 5, 7, 9, 11,13, 15, 17, 20]:
+        pts, tri, edge = getplate.getPlate(n)
+        model = FEM.Elasticity_2d(pts, tri, edge, f, nu, u_ex=u_ex)
+        model.solve(time_steps=1, T=1) # different T gives slightly different answers, why? Since w!=w_prev? TODO think some more about this
+        print(model.relative_L2())
+    model.plot_solution()
+
+
 def test_2d_heat():
     t = sp.symbols('t')
     x = sp.symbols('x')
@@ -24,19 +46,19 @@ def test_2d_heat():
     print('The following 3 numbers are L2 for increasing amount of nodes and steps, so they should approach zero:')
     n=3
     pts, tri, edge = getplate.getPlate(n)
-    fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
     fem_model.solve(5)
     print(fem_model.relative_L2())
     fem_model.plot_solution()
     n=6
     pts, tri, edge = getplate.getPlate(n)
-    fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
     fem_model.solve(20)
     print(fem_model.relative_L2())
     fem_model.plot_solution()
     n=10
     pts, tri, edge = getplate.getPlate(n)
-    fem_model = FEM.Heat_2D(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
     fem_model.solve(50)
     print(fem_model.relative_L2())
     fem_model.plot_solution()
@@ -260,6 +282,8 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
+    test_2d_elast()
+    quit()
     test_2d_heat()
     test_fem_2d()
     test_in_triangle()

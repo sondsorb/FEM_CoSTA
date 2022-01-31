@@ -270,12 +270,12 @@ class Fem_2d:
         self.f = f # source function
         self.p = p # degree of test functions'''
         self.u_ex = u_ex # exact function if provided
-        assert p==1 # p>1 not implemented (no plans to do so either)
+        assert p==1 # p>1 not implemented (no real plans to do so either)
 
     def single_point_solution(self, x):
         tri=self.tri
         pts=self.pts
-        vct = self.u_fem
+        u = self.u_fem
         # we find the element where x is:
         for i1,i2,i3 in tri:
             p1,p2,p3 = pts[i1],pts[i2],pts[i3]
@@ -283,7 +283,7 @@ class Fem_2d:
             A = np.array([p2-p1, p3-p1]).T
             x_local = np.linalg.solve(A, x-p1)
             if x_local[0]>=-1e-15 and x_local[1]>=-1e-15 and x_local[0]+x_local[1]<=1+1e-15:
-                return vct[i1] + x_local[0]*(vct[i2]-vct[i1]) + x_local[1]*(vct[i3]-vct[i1])
+                return u[i1] + x_local[0]*(u[i2]-u[i1]) + x_local[1]*(u[i3]-u[i1])
         print('Error: function evaluated outside domain')
         return 1/0
 
@@ -339,10 +339,11 @@ class Heat_2d(Fem_2d):
         super().__init__(pts, tri, edge, f, p, u_ex)
         self.time=0
         self.k = k
+        if self.k != None:
+            self.__discretize()
 
     def __discretize(self):
         Np = len(self.pts)
-        F = np.zeros((Np))
         A = np.zeros((Np,Np))
         M = np.zeros((Np,Np))
 
@@ -367,46 +368,71 @@ class Heat_2d(Fem_2d):
                     # The integrand for a_ij is the constant function nabla phi_i * nabla phi_j
                     def integrand_a(x):
                         return phi[i][1]*phi[j][1] + phi[i][2]*phi[j][2]
-                    A[I[i],I[j]] += quadrature.quadrature2d(p0,p1,p2,3, integrand_a)
+                    A[I[i],I[j]] += quadrature.quadrature2d(p0,p1,p2,1, integrand_a)
 
                     def integrand_m(x): # for m_ij, this integrand is phi_i*phi_j
                         return (phi[i][0] + phi[i][1]*x[0] + phi[i][2]*x[1])*(phi[j][0] + phi[j][1]*x[0] + phi[j][2]*x[1])
                     M[I[i],I[j]] += quadrature.quadrature2d(p0,p1,p2,4, integrand_m)
 
-                def integrand_f(x): # for f_i, this is the integrand phi_i*f
-                    return (phi[i][0] + phi[i][1]*x[0] + phi[i][2]*x[1])*self.f(x=x, t=self.time)
-                F[I[i]] += quadrature.quadrature2d(p0,p1,p2,4, integrand_f)
+        self.M = M
+        self.A = A
+        self.MA = M+A*self.k
 
-        return M,A,F
-
-    def __add_Dirichlet_bdry(self, g=None):
-        '''g can be used instead of u_ex, either when u_ex is unknown or for testing with some other g'''
-        assert g!=None or self.u_ex!=None
+        # add Dirichlet bdry
         for line in self.edge:
             for point in line: # this loops through every point twice, but ensures all points are considered
                 self.MA[point,:] = 0 # remove redundant equations
                 self.M[point,:] = 0
                 self.MA[point,point] = self.k
-                self.F[point] = self.u_ex(x=self.pts[point], t = self.time) if g==None else g[point](t=self.time)
+        self.MA = spsp.csr_matrix(self.MA)
 
-    def step(self, g=None, correction = 0):
+
+    def __make_F(self):
+        # self.time must be up to date!
+        Np = len(self.pts)
+        F = np.zeros((Np))
+        for I in self.tri: # elementwise
+            p0 = self.pts[I[0]] # points in the triangle
+            p1 = self.pts[I[1]]
+            p2 = self.pts[I[2]]
+            # On the triangle phi_a is a+bx+cy such that phi_i(pj)=d_ij
+            # We solve a linear system of equations to find a,b,c.
+            m = np.array([
+                [1, p0[0],p0[1]],
+                [1, p1[0],p1[1]],
+                [1, p2[0],p2[1]]
+                ])
+            phi = [0,0,0]
+            phi[0] = np.linalg.solve(m, np.array([1,0,0]))
+            phi[1] = np.linalg.solve(m, np.array([0,1,0]))
+            phi[2] = np.linalg.solve(m, np.array([0,0,1]))
+            # We loop through all the contributions to F
+            for i in range(3):
+                def integrand_f(x): # for f_i, this is the integrand phi_i*f
+                    return (phi[i][0] + phi[i][1]*x[0] + phi[i][2]*x[1])*self.f(x=x, t=self.time)
+                F[I[i]] += quadrature.quadrature2d(p0,p1,p2,4, integrand_f)
+        self.F = F
+
+        # add Dirichlet bdry
+        for line in self.edge:
+            for point in line: # this loops through every point twice, but ensures all points are considered
+                self.F[point] = self.u_ex(x=self.pts[point], t = self.time)
+
+    def step(self, correction = 0):
         '''Do one step of the backward euler scheme'''
         u_prev = self.u_fem
         self.time += self.k
-        M,A,F = self.__discretize()
-        self.F = F
-        self.M = M
-        self.MA = M+A*self.k
-        self.__add_Dirichlet_bdry(g=g)
-        self.u_fem = spla.spsolve(spsp.csr_matrix(self.MA), M@u_prev+self.F*self.k+correction) #Solve system
+        self.__make_F()
+        self.u_fem = spla.spsolve(self.MA, self.M@u_prev+self.F*self.k+correction) #Solve system
         #self.u_fem = np.linalg.solve(self.MA, M@u_prev+self.F*self.k+correction) #Solve system
 
 
-    def solve(self, time_steps, u0=None, g=None, T=1, callback=None):
+    def solve(self, time_steps, u0=None, T=1, callback=None):
         '''find u at t=T using backward euler'''
         assert self.time == 0 # this is only supposed to run on unsolved systems
         k = T/time_steps
         self.k=k
+        self.__discretize()
 
         if u0 != None:
             self.u_fem = u0(x=self.pts)
@@ -414,7 +440,7 @@ class Heat_2d(Fem_2d):
             self.u_fem = self.u_ex(x=self.pts, t=0)
         assert self.u_fem.shape == (len(self.pts),)
         for t in range(time_steps):
-            self.step(g)
+            self.step()
             if callback!=None:
                 callback(self.time,self.u_fem)
 
@@ -452,3 +478,232 @@ class Disc: # short for disctretizatoin
             assert self.p == 1
             return Heat_2d(self.pts, self.tri, self.edge, f, p=self.p, u_ex=u_ex, k=self.k)
         raise ValueError(f'Dimentionality dim={self.dim} is not implemented')
+
+
+
+class Elasticity_2d(Fem_2d):
+    def __init__(self, pts, tri, edge, f, nu, p=1, u_ex=None, k=None):
+        '''
+        pts: nodal points, form [[x1, y1], [x2, y2,] ...]
+        tri: triangulation, indices of pts, from [[1,2,3], [0,3,4]... ]
+               (where pts[1], pts[2], pts[3] makes up on triangle and so on)
+        edge: list of indices of boundary nodes. Form [[0,1], [1,5]...]
+               (where [pts[0],pts[1]] is a boundary edge and so on)
+        p: polynomial degree of test functoins
+        nu: Poisson ration - constant used in stiffness tensor C.
+            Note that the other constant are effectively scaled away by x (E) and t (rho). Adjust F and T to compensate.
+        f: source, form f(x,t) where x = [x_1, x_2]. should return [f_1, f_2]
+        u_ex: exact solution. Form: u_ex(x,t=T) (important that T is default time,
+                                    time is not provided when calculating L2).
+                                    u_ex should return [u_1, u_2] i.e. [u,v]
+        k: time step lenght. Only needs to be given when usin step() and not solve()
+        '''
+        self.pts = pts # nodal points
+        self.tri = tri #triangulation
+        self.edge = edge # index of nodal points on the edge
+        self.f = f # source function
+        self.p = p # degree of test functions'''
+        self.u_ex = u_ex # exact function if provided
+        assert p==1 # p>1 not implemented (no real plans to do so either)
+
+        self.time=0
+        self.k = k
+        self.nu=nu
+        self.C = np.array([[1,nu,0],[nu,1,0],[0,0,(1-nu)/2]])/(1-nu**2)
+        if self.k != None:
+            self.__discretize()
+
+    def single_point_solution(self, x):
+        tri=self.tri
+        pts=self.pts
+        u = self.u_fem
+        # we find the element where x is:
+        for i1,i2,i3 in tri:
+            p1,p2,p3 = pts[i1],pts[i2],pts[i3]
+            # Same as in_triangle(), but keep y
+            A = np.array([p2-p1, p3-p1]).T
+            x_local = np.linalg.solve(A, x-p1)
+            if x_local[0]>=-1e-15 and x_local[1]>=-1e-15 and x_local[0]+x_local[1]<=1+1e-15:
+                return (
+                           u[2*i1] + x_local[0]*(u[2*i2]-u[2*i1]) + x_local[1]*(u[2*i3]-u[2*i1]),
+                           u[2*i1+1] + x_local[0]*(u[2*i2+1]-u[2*i1+1]) + x_local[1]*(u[2*i3+1]-u[2*i1+1])
+                       )
+        print('Error: function evaluated outside domain')
+        return 1/0
+
+    def solution(self, x):
+        if length(x[0])>0: # not single x and y values
+            return np.array([self.solution(x_i) for x_i in x])
+        else:
+            return self.single_point_solution(x)
+
+    def relative_L2(self):
+        return self.L2_2d(self.u_ex,self.solution)/self.L2_2d(self.u_ex)
+
+    def L2_2d(self, f1, f2 = lambda x: [0,0]):
+        assert len(self.pts) == np.amax(self.tri)+1
+        l=0
+        def integrand(x):
+            assert len(x) == 2
+            assert len(f1(x)) == 2
+            assert len(f2(x)) == 2
+            return (f1(x)[0]-f2(x)[0])**2 + (f1(x)[1]-f2(x)[1])**2
+        for triangle in self.tri:
+            l+= quadrature.quadrature2d(self.pts[triangle[0]],self.pts[triangle[1]],self.pts[triangle[2]],4,integrand)
+        return l**0.5
+
+    def __discretize(self):
+        Np = len(self.pts)
+        A = np.zeros((2*Np,2*Np))
+        M = np.zeros((2*Np,2*Np))
+
+        for I in self.tri: # elementwise
+            p0 = self.pts[I[0]] # points in the triangle
+            p1 = self.pts[I[1]]
+            p2 = self.pts[I[2]]
+            # On the triangle phi_a is a+bx+cy such that phi_i(pj)=d_ij
+            # We solve a linear system of equations to find a,b,c.
+            m = np.array([
+                [1, p0[0],p0[1]],
+                [1, p1[0],p1[1]],
+                [1, p2[0],p2[1]]
+                ])
+            phi = [0,0,0]
+            phi[0] = np.linalg.solve(m, np.array([1,0,0]))
+            phi[1] = np.linalg.solve(m, np.array([0,1,0]))
+            phi[2] = np.linalg.solve(m, np.array([0,0,1]))
+            # We loop through all the contributions to A
+            for i in range(6): # p0_u, p0_v, p1_u, p1_v, p2_u, p2_v (u,v components of u)
+                for j in range(6):
+                    # The integrand for a_ij is the constant function epsilon(phi_i)^T * epsilon(phi_j)
+                    epsilon_i = np.array([((i+1)%2)*phi[i//2][1], (i%2)*phi[i//2][2], (i%2)*phi[i//2][1] + ((i+1)%2)*phi[i//2][2]])
+                    epsilon_j = np.array([((j+1)%2)*phi[j//2][1], (j%2)*phi[j//2][2], (j%2)*phi[j//2][1] + ((j+1)%2)*phi[j//2][2]])
+                    def integrand_a(x):
+                        return epsilon_i.T @ self.C @ epsilon_j
+                    A[2*I[i//2] + (i%2),2*I[j//2] + (j%2)] += quadrature.quadrature2d(p0,p1,p2,1, integrand_a)
+
+                    def integrand_m(x): # for m_ij, this integrand is phi_i*phi_j
+                        return (phi[i//2][0] + phi[i//2][1]*x[0] + phi[i//2][2]*x[1])*(phi[j//2][0] + phi[j//2][1]*x[0] + phi[j//2][2]*x[1])
+                    if i%2 == j%2: # dont mix dimensions
+                        M[2*I[i//2] + (i%2),2*I[j//2] + (j%2)] += quadrature.quadrature2d(p0,p1,p2,4, integrand_m)
+        self.M = M
+        #for X in M:
+        #    print([x for x in X])
+        self.A = A
+        self.MA = np.zeros((4*Np,4*Np))
+        self.MA[:2*Np,:2*Np] = A 
+        self.MA[:2*Np,2*Np:] = M/self.k
+        self.MA[2*Np:,:2*Np] = -np.identity(2*Np)/self.k
+        self.MA[2*Np:,2*Np:] = np.identity(2*Np)
+
+        # add Dirichlet bdry
+        for line in self.edge:
+            for point in line: # this loops through every point twice, but ensures all points are considered
+                self.MA[2*point,:] = 0 # remove redundant equations
+                self.MA[2*point+1,:] = 0
+                self.M[2*point,:] = 0
+                self.M[2*point+1,:] = 0
+                self.A[2*point,:] = 0 # Remove this
+                self.A[2*point+1,:] = 0 # Remove this
+                self.A[2*point,2*point] = 1 # Remove this
+                self.A[2*point+1,2*point+1] = 1 # Remove this
+                self.MA[2*point,2*point] = 1
+                self.MA[2*point+1,2*point+1] = 1
+        self.MA = spsp.csr_matrix(self.MA)
+
+
+    def __make_F(self):
+        # self.time must be up to date!
+        Np = len(self.pts)
+        F = np.zeros((2*Np))
+        for I in self.tri: # elementwise
+            p0 = self.pts[I[0]] # points in the triangle
+            p1 = self.pts[I[1]]
+            p2 = self.pts[I[2]]
+            # On the triangle phi_a is a+bx+cy such that phi_i(pj)=d_ij
+            # We solve a linear system of equations to find a,b,c.
+            m = np.array([
+                [1, p0[0],p0[1]],
+                [1, p1[0],p1[1]],
+                [1, p2[0],p2[1]]
+                ])
+            phi = [0,0,0]
+            phi[0] = np.linalg.solve(m, np.array([1,0,0]))
+            phi[1] = np.linalg.solve(m, np.array([0,1,0]))
+            phi[2] = np.linalg.solve(m, np.array([0,0,1]))
+            # We loop through all the contributions to F
+            for i in range(6): # p0_u, p0_v, p1_u, p1_v, p2_u, p2_v (u,v components of u)
+                def integrand_f(x): # for f_i, this is the integrand phi_i*f
+                    F = self.f(x, t=self.time)
+                    return (F[0]*((i+1)%2) + F[1]*(i%2)) * phi[i//2] @ np.array([1,x[0],x[1]])
+                F[I[i//2]*2 + (i%2)] += quadrature.quadrature2d(p0,p1,p2,4, integrand_f)
+        self.F = F
+        # add Dirichlet bdry
+        for line in self.edge:
+            for point in line: # this loops through every point twice, but ensures all points are considered
+                self.F[2*point:2*point+2] = self.u_ex(x=self.pts[point], t = self.time)
+
+
+
+    def step(self, g=None, correction = 0):
+        '''Do one step of the backward euler scheme'''
+        u_prev = self.u_fem
+        w_prev = self.w_fem
+        Np = len(self.pts)
+        self.time += self.k
+        self.__make_F()
+        res = spla.spsolve(self.MA, np.concatenate((self.M@w_prev/self.k+self.F+correction, -u_prev/self.k))) #Solve system
+        self.u_fem = res[:2*Np]
+        self.w_fem = res[2*Np:]
+        #self.u_fem = np.linalg.solve(self.A, self.F)
+
+
+    def solve(self, time_steps, u0=None, T=1, callback=None):
+        '''find u at t=T using backward euler'''
+        assert self.time == 0 # this is only supposed to run on unsolved systems
+        k = T/time_steps
+        self.k=k
+        self.__discretize()
+
+        if u0 != None:
+            self.u_fem = u0(x=self.pts)
+            self.w_fem = w0(x=self.pts)
+        else:
+            self.u_fem = np.ravel(self.u_ex(x=self.pts, t=0))
+            self.w_fem = np.ravel(-self.u_ex(x=self.pts, t=0) + self.u_ex(x=self.pts, t=k/10)) * (10/k) # approximate w numerically
+
+        assert self.u_fem.shape == (2*len(self.pts),)
+        for t in range(time_steps):
+            self.step()
+            if callback!=None:
+                callback(self.time,self.u_fem)
+
+    def plot_solution(self):
+
+        N=int(len(self.pts)**0.5-1)*4
+
+        X = np.array([np.linspace(-1,1,N+1)]*(N+1)).T
+        Y = np.array([np.linspace(-1,1,N+1)]*(N+1))
+        u_fem = self.solution(np.array([X.T,Y.T]).T)
+        u_ex = self.u_ex(np.array([X.T,Y.T]).T)
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(2,2,1,projection='3d')
+        plt.title('u_fem')
+        ax2 = fig.add_subplot(2,2,2,projection='3d')
+        plt.title('u_exact')
+        ax3 = fig.add_subplot(2,2,3,projection='3d')
+        plt.title('v_fem')
+        ax4 = fig.add_subplot(2,2,4,projection='3d')
+        plt.title('v_exact')
+        ax1.plot_surface(X,Y,u_fem[:,:,0], cmap=cm.coolwarm)
+        ax2.plot_surface(X,Y,u_ex[:,:,0], cmap=cm.coolwarm)
+        ax3.plot_surface(X,Y,u_fem[:,:,1], cmap=cm.coolwarm)
+        ax4.plot_surface(X,Y,u_ex[:,:,1], cmap=cm.coolwarm)
+        #ax.view_init(elev=24, azim=-30)
+        #ax.set_xlabel('x')
+        #ax.set_ylabel('y')
+        #ax.set_zlabel('u')
+        plt.tight_layout()
+        #plt.savefig(f'../preproject/1d_heat_figures/sols/{sol}.pdf')
+        plt.show()
