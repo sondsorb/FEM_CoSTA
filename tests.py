@@ -10,25 +10,38 @@ import sympy as sp
 import utils
 
 def test_2d_elast():
-    nu=0.5
-    def u_ex(x, t=1):
-        if len(np.array(x).shape)>1:
-            return (np.array([u_ex(xi,t) for xi in x]))
-        res = (x[0]**2-1)*(x[1]**2-1)
-        return [res,res]
-    def f(x,t):
-        if len(np.array(x).shape)>1:
-            return (np.array([f(xi,t) for xi in x]))
-        f1 = 1/(1-nu**2) * (-2*x[1]**2-x[0]**2+nu*x[0]**2-2*nu*x[0]*x[1]-2*x[0]*x[1]+3-nu)
-        f2 = 1/(1-nu**2) * (-2*x[0]**2-x[1]**2+nu*x[1]**2-2*nu*x[0]*x[1]-2*x[0]*x[1]+3-nu)
-        return [f1,f2]
-    
-    for n in [3, 5, 7, 9, 11,13, 15, 17, 20]:
-        pts, tri, edge = getplate.getPlate(n)
-        model = FEM.Elasticity_2d(pts, tri, edge, f, nu, u_ex=u_ex)
-        model.solve(time_steps=1, T=1) # different T gives slightly different answers, why? Since w!=w_prev? TODO think some more about this
-        print(model.relative_L2())
-    model.plot_solution()
+    T=1
+    for i in [0,1,2]:
+        f,u,w = functions.manufacture_elasticity_solution(d1=2, d2=2, **functions.ELsols[i])
+        sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=False, name=f'ELsol{i}')
+        sol.set_alpha(1)
+        print('solving with increasing resolution, error (printed below) should approach 0')
+        for n in [3, 5, 7, 9, 11,13,15,17,20]:
+            pts, tri, edge = getplate.getPlate(n)
+            model = FEM.Elasticity_2d(pts, tri, edge, sol.f, u_ex=sol.u)
+            model.solve(time_steps=n, T=sol.T)
+            print(model.relative_L2())
+        model.plot_solution()
+
+    #nu=0.5
+    #def u_ex(x, t=1):
+    #    if len(np.array(x).shape)>1:
+    #        return (np.array([u_ex(xi,t) for xi in x]))
+    #    res = (x[0]**2-1)*(x[1]**2-1)
+    #    return [res,res]
+    #def f(x,t):
+    #    if len(np.array(x).shape)>1:
+    #        return (np.array([f(xi,t) for xi in x]))
+    #    f1 = 1/(1-nu**2) * (-2*x[1]**2-x[0]**2+nu*x[0]**2-2*nu*x[0]*x[1]-2*x[0]*x[1]+3-nu)
+    #    f2 = 1/(1-nu**2) * (-2*x[0]**2-x[1]**2+nu*x[1]**2-2*nu*x[0]*x[1]-2*x[0]*x[1]+3-nu)
+    #    return [f1,f2]
+    #
+    #for n in [3, 5, 7, 9, 11,13, 15, 17, 20]:
+    #    pts, tri, edge = getplate.getPlate(n)
+    #    model = FEM.Elasticity_2d(pts, tri, edge, f, nu, u_ex=u_ex)
+    #    model.solve(time_steps=1, T=1)
+    #    print(model.relative_L2())
+    #model.plot_solution()
 
 
 def test_2d_heat():

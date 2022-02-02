@@ -445,44 +445,9 @@ class Heat_2d(Fem_2d):
                 callback(self.time,self.u_fem)
 
 
-class Disc: # short for disctretizatoin
 
-    def __init__(self, T, time_steps, Ne, p=1, dim=1, xa=0, xb=1, ya=0, yb=1):
-        assert p==1 or dim==1
-        self.T=T
-        self.time_steps = time_steps
-        self.k = T/time_steps
-        self.p=p
-        self.dim=dim
-        
-        if dim == 1:
-            self.pts = np.linspace(xa,xb,Ne*p+1) # Note Ne is in each dimension (for now at least)
-            self.pts_fine = np.linspace(xa,xb,Ne*p*8+1)
-            self.edge_pts = [0,len(self.pts)-1]
-            self.pts_line = self.pts_fine
-        elif dim == 2:
-            self.pts, self.tri, self.edge = getplate.getPlate(Ne+1)
-            self.pts_fine, self.tri_fine, self.edge_fine = getplate.getPlate(Ne*4+1)
-            self.edge_pts = self.edge[:,0]
-            assert (np.sort(self.edge[:,1]) == np.sort(self.edge_pts)).all() # control that all edge points are in first col of edge
-            self.pts_line = np.zeros((Ne*p*8+1, 2))
-            self.pts_line[:,0] = np.linspace(xa,xb,Ne*p*8+1)
-        else:
-            raise ValueError(f'Dimentionality dim={dim} is not implemented')
-        self.inner_pts = np.setdiff1d(np.arange(len(self.pts)), self.edge_pts)
-
-    def make_heat_model(self, f, u_ex=None):
-        if self.dim == 1:
-            return Heat(self.pts, f, p=self.p, u_ex=u_ex, k=self.k)
-        elif self.dim == 2:
-            assert self.p == 1
-            return Heat_2d(self.pts, self.tri, self.edge, f, p=self.p, u_ex=u_ex, k=self.k)
-        raise ValueError(f'Dimentionality dim={self.dim} is not implemented')
-
-
-
-class Elasticity_2d(Fem_2d):
-    def __init__(self, pts, tri, edge, f, nu, p=1, u_ex=None, k=None):
+class Elasticity_2d():
+    def __init__(self, pts, tri, edge, f, nu=0.25, p=1, u_ex=None, w_ex=None, k=None):
         '''
         pts: nodal points, form [[x1, y1], [x2, y2,] ...]
         tri: triangulation, indices of pts, from [[1,2,3], [0,3,4]... ]
@@ -490,7 +455,7 @@ class Elasticity_2d(Fem_2d):
         edge: list of indices of boundary nodes. Form [[0,1], [1,5]...]
                (where [pts[0],pts[1]] is a boundary edge and so on)
         p: polynomial degree of test functoins
-        nu: Poisson ration - constant used in stiffness tensor C.
+        nu: Poisson ration - constant used in stiffness tensor C. 0.25 typical value for many solids.
             Note that the other constant are effectively scaled away by x (E) and t (rho). Adjust F and T to compensate.
         f: source, form f(x,t) where x = [x_1, x_2]. should return [f_1, f_2]
         u_ex: exact solution. Form: u_ex(x,t=T) (important that T is default time,
@@ -504,6 +469,7 @@ class Elasticity_2d(Fem_2d):
         self.f = f # source function
         self.p = p # degree of test functions'''
         self.u_ex = u_ex # exact function if provided
+        self.w_ex = w_ex # exact time differentiated function if provided
         assert p==1 # p>1 not implemented (no real plans to do so either)
 
         self.time=0
@@ -670,7 +636,12 @@ class Elasticity_2d(Fem_2d):
             self.w_fem = w0(x=self.pts)
         else:
             self.u_fem = np.ravel(self.u_ex(x=self.pts, t=0))
-            self.w_fem = np.ravel(-self.u_ex(x=self.pts, t=0) + self.u_ex(x=self.pts, t=k/10)) * (10/k) # approximate w numerically
+            if self.w_ex != None:
+                self.w_fem = np.ravel(self.w_ex(x=self.pts, t=0))
+            else:
+                print('w not provided, approximating')
+                self.w_fem = np.ravel(-self.u_ex(x=self.pts, t=0) + self.u_ex(x=self.pts, t=k/10)) * (10/k) # approximate w numerically
+
 
         assert self.u_fem.shape == (2*len(self.pts),)
         for t in range(time_steps):
@@ -707,3 +678,61 @@ class Elasticity_2d(Fem_2d):
         plt.tight_layout()
         #plt.savefig(f'../preproject/1d_heat_figures/sols/{sol}.pdf')
         plt.show()
+
+
+class Disc: # short for disctretizatoin
+
+    def __init__(self, T, time_steps, Ne, equation='heat', p=1, dim=1, xa=0, xb=1, ya=0, yb=1):
+        assert p==1 or dim==1
+        self.T=T
+        self.time_steps = time_steps
+        self.k = T/time_steps
+        self.p=p
+        self.dim=dim
+        self.udim=dim if equation=='elasticity' else 1 # dimensionality of u
+        self.equation=equation
+        
+        if dim == 1:
+            self.pts = np.linspace(xa,xb,Ne*p+1) # Note Ne is in each dimension (for now at least)
+            self.pts_fine = np.linspace(xa,xb,Ne*p*8+1)
+            self.edge_ids1 = [0,len(self.pts)-1]
+            self.edge_ids2 = self.edge_ids1
+            self.pts_line = self.pts_fine
+        elif dim == 2:
+            self.pts, self.tri, self.edge = getplate.getPlate(Ne+1)
+            self.pts_fine, self.tri_fine, self.edge_fine = getplate.getPlate(Ne*4+1)
+            self.edge_ids1 = self.edge[:,0] # indices of points in pts that are on the edge
+            self.edge_ids2 = self.edge_ids1  # indices in u_fem correspondting to the edge points (differ from edge_ids1 when udim>1)
+            if equation == 'elasticity':
+                self.edge_ids2 = np.ravel(np.array([2*self.edge[:,0], 2*self.edge[:,0]+1]).T)
+            assert (np.sort(self.edge[:,1]) == np.sort(self.edge[:,0])).all() # control that all edge points are in first col of edge
+            self.pts_line = np.zeros((Ne*p*8+1, 2))
+            self.pts_line[:,0] = np.linspace(xa,xb,Ne*p*8+1)
+        else:
+            raise ValueError(f'Dimentionality dim={dim} is not implemented')
+        #self.Np=len(self.pts) # Number of points
+        self.Nv=len(self.pts)*self.udim # Number of values (=len of u_fem)
+        self.inner_ids1 = np.setdiff1d(np.arange(len(self.pts)), self.edge_ids1)
+        self.inner_ids2 = np.setdiff1d(np.arange(self.Nv), self.edge_ids2)
+
+    def make_model(self, f, u_ex=None, w_ex=None):
+        if self.equation == 'heat':
+            if self.dim == 1:
+                return Heat(self.pts, f, p=self.p, u_ex=u_ex, k=self.k)
+            elif self.dim == 2:
+                assert self.p == 1
+                return Heat_2d(self.pts, self.tri, self.edge, f, p=self.p, u_ex=u_ex, k=self.k)
+            raise ValueError(f'Dimentionality dim={self.dim} is not implemented')
+        elif self.equation == 'elasticity':
+            if self.dim == 2:
+                return Elasticity_2d(self.pts, tri=self.tri, edge=self.edge, f=f, p=self.p, u_ex=u_ex, k=self.k, w_ex=w_ex)
+            raise ValueError(f'Dimentionality dim={self.dim} is not implemented')
+        raise ValueError(f'Equation name={self.equation} is not implemented')
+
+    def format_u(self, u):
+        if self.equation == 'heat':
+            return u
+        elif self.equation == 'elasticity':
+            assert u.shape[1] == 2
+            return np.ravel(u)
+        raise ValueError(f'Equation name={self.equation} is not implemented')
