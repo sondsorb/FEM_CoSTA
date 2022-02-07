@@ -64,7 +64,10 @@ class Solution:
     def f(self, x, t=None):
         if t==None:
             t = self.T
-        return 0 if self.zero_source else self.f_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
+        result = np.array(self.f_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta))
+        if self.zero_source:
+            result *= 0
+        return result
 
     def w(self, x, t=None):
         try:
@@ -102,6 +105,7 @@ def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
 t = sp.symbols('t')
 x = sp.symbols('x')
 y = sp.symbols('y')
+z = sp.symbols('z')
 alpha = sp.symbols('alpha')
 ELsols = [
             {'u':
@@ -126,26 +130,93 @@ ELsols = [
              'alpha_var':alpha,
             }
          ]
+ELsols3d = [
+            {'u':
+                    [sp.sin(np.pi*(x+alpha*y+(1+alpha)/2*z))*sp.cos(alpha*t),
+                     sp.cos(np.pi*(x+alpha*y+(1+alpha)/2*z))*sp.sin(alpha*t),
+                    -sp.cos(np.pi*(x+alpha*y+(1+alpha)/2*z))*sp.sin(alpha*t)],
+             't_var':t,
+             'x_vars':[x,y,z],
+             'alpha_var':alpha,
+            },
+            {'u':
+                    [sp.exp((-t*x**2 + y**2 + z**2)/(1+alpha+t**2)),
+                     sp.exp((+t*x**2 - y**2 + z**2)/(1+alpha+t**2)),
+                     sp.exp((+t*x**2 + y**2 - z**2)/(1+alpha+t**2))],
+             't_var':t,
+             'x_vars':[x,y,z],
+             'alpha_var':alpha,
+            },
+            {'u':
+                    [(x**3) + (y**2)*((t+0.5)**1.5) + x*y*alpha + (t+0.5)**0.5*z**2 + z*(x+y)*alpha,
+                     (x**2) + (y**3)*((t+0.5)**1.1) - x*y*alpha + (t+0.5)**0.5*z**2 + z*(x-y)*alpha,
+                     (x**2) + (y**2)*((t+0.5)**1.1) + x*y*alpha + (t+0.5)**0.5*z**3 + z*(-x+y)*alpha
+                     ],
+             't_var':t,
+             'x_vars':[x,y,z],
+             'alpha_var':alpha,
+            }
+         ]
 
 def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2, nu=0.25):
     '''Manufactures f from the elasticity equation given u (list of sympy equations)
     returns functions with unused dimensions=0'''
     print('manufacturing solution, from', d1, 'to', d2, 'dimensions.')
     assert d1>=d2
-    assert d1<=2
+    assert d1<=3
     assert d2>=2
-    epsilon_bar = np.array([u[0].diff(x_vars[0]), u[1].diff(x_vars[1]), u[1].diff(x_vars[0])+u[0].diff(x_vars[1])])
-    C = np.array([[1,nu,0],[nu,1,0],[0,0,(1-nu)/2]])/(1-nu**2)
-    sigma_bar = C @ epsilon_bar
+    assert len(u) == d1
+    if d1 == 2:
+        epsilon_bar = np.array([
+            u[0].diff(x_vars[0]),
+            u[1].diff(x_vars[1]),
+            u[1].diff(x_vars[0])+u[0].diff(x_vars[1])])
+        C = np.array([
+            [1,nu,0],
+            [nu,1,0],
+            [0,0,(1-nu)/2]
+            ])/(1-nu**2)
+        sigma_bar = C @ epsilon_bar
 
-    # static: f = -Div(sigma) (remember sigma != sigma_bar)
-    f = [-sigma_bar[0].diff(x_vars[0]) -sigma_bar[2].diff(x_vars[1]),
-         -sigma_bar[2].diff(x_vars[0]) -sigma_bar[1].diff(x_vars[1])]
+        # static: f = -Div(sigma) (remember sigma != sigma_bar)
+        f = np.array([-sigma_bar[0].diff(x_vars[0]) -sigma_bar[2].diff(x_vars[1]),
+                      -sigma_bar[2].diff(x_vars[0]) -sigma_bar[1].diff(x_vars[1])])
+    if d1 == 3:
+        epsilon_bar = np.array([
+            u[0].diff(x_vars[0]),
+            u[1].diff(x_vars[1]),
+            u[2].diff(x_vars[2]),
+            u[1].diff(x_vars[2])+u[2].diff(x_vars[1]),
+            u[2].diff(x_vars[0])+u[0].diff(x_vars[2]),
+            u[0].diff(x_vars[1])+u[1].diff(x_vars[0])
+            ])
+        C = np.array([
+            [1-nu,nu,nu,0,0,0],
+            [nu,1-nu,nu,0,0,0],
+            [nu,nu,1-nu,0,0,0],
+            [0,0,0,1/2-nu,0,0],
+            [0,0,0,0,1/2-nu,0],
+            [0,0,0,0,0,1/2-nu]
+            ]) / ((1+nu)*(1-2*nu))
+        sigma_bar = C @ epsilon_bar
+
+        # static: f = -Div(sigma) (remember sigma != sigma_bar)
+        f = -np.array([
+                sigma_bar[0].diff(x_vars[0]) + sigma_bar[5].diff(x_vars[1]) + sigma_bar[4].diff(x_vars[2]),
+                sigma_bar[5].diff(x_vars[0]) + sigma_bar[1].diff(x_vars[1]) + sigma_bar[3].diff(x_vars[2]),
+                sigma_bar[4].diff(x_vars[0]) + sigma_bar[3].diff(x_vars[1]) + sigma_bar[2].diff(x_vars[2]),
+                ])
+             
+
     # add transient term; now f = u_tt - Div(sigma)
-    f += np.array([u[0].diff(t_var,t_var), u[1].diff(t_var, t_var)])
-    f_temp = lambdify([*[x_vars],t_var,alpha_var],f, "numpy")
-    u_temp = lambdify([*[x_vars],t_var,alpha_var],u, "numpy")
-    w_temp = lambdify([*[x_vars],t_var,alpha_var],[u[0].diff(t_var),u[1].diff(t_var)], "numpy")
+    f += np.array([ui.diff(t_var,t_var) for ui in u])
+
+    # make lambda functions
+    f_temp = lambdify([*[x_vars],t_var,alpha_var],f[:d2], "numpy")
+    u_temp = lambdify([*[x_vars],t_var,alpha_var],u[:d2], "numpy")
+    w_temp = lambdify([*[x_vars],t_var,alpha_var],[ui.diff(t_var) for ui in u[:d2]], "numpy")
+    
+    # make functions
     def f(x,t,alpha,time_delta=0):
         x = [x] if length(x) == 0 else x
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)

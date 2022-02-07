@@ -46,7 +46,7 @@ def set_args(mode=mode):
         NoM = 3
         time_delta = 5
     elif mode == 'quick_test':
-        Ne = 8
+        Ne = 10
         time_steps = 500
         DNNkwargs = {'n_layers':6,'depth':80, 'bn_depth':8, 'lr':8e-5, 'patience':[20,20]}
         pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'depth':80,'bn_depth':8,'lr':8e-5,'patience':[20,20]}
@@ -54,8 +54,8 @@ def set_args(mode=mode):
         NoM=4
         time_delta = 0.3 # max 30 steps back
     elif mode == 'full_test':
-        Ne = 12
-        time_steps = 5000
+        Ne = 15
+        time_steps = 2500
         DNNkwargs = {'n_layers':6,'depth':80, 'bn_depth':8, 'lr':1e-5, 'patience':[20,20]}
         pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'depth':80,'bn_depth':8,'lr':1e-5,'patience':[20,20]}
         LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20]}
@@ -64,30 +64,19 @@ def set_args(mode=mode):
 
 set_args()
 
-if len(sys.argv)>2:
-    if sys.argv[2]=='f':
-        source = True
-    elif sys.argv[2]=='0':
-        source = False
-    else:
-        print('failed reading source term')
-        source = True
-else:
-    source = False
-print('Using exact source' if source else 'Using unknown source (i.e. guessing zero)')
 
-if len(sys.argv)>3:
-    p = int(sys.argv[3])
+if len(sys.argv)>2:
+    p = int(sys.argv[2])
 else:
     p=1
 print(f'Using p={p}')
 
 modelnames = {
         'DNN' : NoM,
-        #'pgDNN' : NoM,
+        'pgDNN' : NoM,
         #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
-        #'CoSTA_pgDNN' : NoM,
+        'CoSTA_pgDNN' : NoM,
         #'CoSTA_LSTM' : NoM,
         }
 NNkwargs = {
@@ -114,19 +103,19 @@ xa,xb,ya,yb = -1,1,-1,1
 #xa,xb,ya,yb = 0,1,0,1
 
 f,u = functions.manufacture_solution(u,t,[x,y,z],alpha, d1=3, d2=2)
-sol = functions.Solution(T=1e-2, f_raw=f, u_raw=u, zero_source=not source, name=f'bp_tst1', time_delta=time_delta)
+sol = functions.Solution(T=1e-2, f_raw=f, u_raw=u, zero_source=False, name=f'bp_tst1', time_delta=time_delta)
 
 model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)
 extra_tag = '' # for different names when testing specific stuff
 figname = None
+figname = f'../master/bp_heat_figures/{mode}/interpol/loss_sol{x}{extra_tag}.pdf'
 model_folder = None
-model.plot=True
+model.plot=False
 #model.train(figname=figname, model_folder = model_folder)
 model.train(figname=figname)
 #model.load_weights(model_folder)
 
-figname = None
-#figname = None
+figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}{extra_tag}.pdf'
 _ = model.test(interpol = True, figname=figname)
-#figname = None
+figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}{extra_tag}.pdf'
 _ = model.test(interpol = False, figname=figname)
