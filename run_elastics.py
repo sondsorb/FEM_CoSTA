@@ -65,10 +65,12 @@ else:
 print('Using', source)
 
 if len(sys.argv)>3:
-    p = int(sys.argv[3])
+    static = bool(sys.argv[3])
 else:
-    p=1
-print(f'Using p={p}')
+    static = False
+print(f'Using {"STATIC" if static else "TRANSIENT"} version of elastic equation')
+
+p=1
 
 modelnames = {
         'DNN' : NoM,
@@ -87,29 +89,31 @@ NNkwargs = {
         'CoSTA_LSTM':LSTMkwargs,
         }
 
+#assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
+
 xa,xb,ya,yb = -1,1,-1,1
-for i in [0,1,2]:
+for i in [2,1,0]:
     print(f'sol_index: {i}\n')
     T = 1
     if source == 'reduced_source':
-        f,u,w = functions.manufacture_elasticity_solution(d1=3, d2=2, **functions.ELsols3d[i])
+        f,u,w = functions.manufacture_elasticity_solution(d1=3, d2=2, static=static, **functions.ELsols3d[i])
     else:
-        f,u,w = functions.manufacture_elasticity_solution(d1=2, d2=2, **functions.ELsols[i])
+        f,u,w = functions.manufacture_elasticity_solution(d1=2, d2=2, static=static, **functions.ELsols[i])
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=source=='zero_source', name=f'ELsol{i}',w_raw=w)
     
-    model = solvers.Solvers(equation='elasticity', modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)
-    extra_tag = '_nl' # for different names when testing specific stuff
+    model = solvers.Solvers(equation='elasticity', static=static, modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)
+    extra_tag = '' # for different names when testing specific stuff
     figname = None
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/interpol/loss_sol{i}{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/loss_sol{i}{extra_tag}.pdf'
     model_folder = None
-    model.plot=False
+    model.plot=True
     #model.train(figname=figname, model_folder = model_folder)
     model.train(figname=figname)
     #model.load_weights(model_folder)
     
     #model.plot=True
     figname = None
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/interpol/sol{i}{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}.pdf'
     _ = model.test(interpol = True, figname=figname)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/extrapol/sol{i}{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}.pdf'
     _ = model.test(interpol = False, figname=figname)

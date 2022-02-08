@@ -447,7 +447,7 @@ class Heat_2d(Fem_2d):
 
 
 class Elasticity_2d():
-    def __init__(self, pts, tri, edge, f, nu=0.25, p=1, u_ex=None, w_ex=None, k=None):
+    def __init__(self, pts, tri, edge, f, nu=0.25, p=1, u_ex=None, w_ex=None, static=False, k=None):
         '''
         pts: nodal points, form [[x1, y1], [x2, y2,] ...]
         tri: triangulation, indices of pts, from [[1,2,3], [0,3,4]... ]
@@ -461,6 +461,7 @@ class Elasticity_2d():
         u_ex: exact solution. Form: u_ex(x,t=T) (important that T is default time,
                                     time is not provided when calculating L2).
                                     u_ex should return [u_1, u_2] i.e. [u,v]
+        static: bool, if static elasticity equation is used (rho = 0)
         k: time step lenght. Only needs to be given when usin step() and not solve()
         '''
         self.pts = pts # nodal points
@@ -472,6 +473,7 @@ class Elasticity_2d():
         self.w_ex = w_ex # exact time differentiated function if provided
         assert p==1 # p>1 not implemented (no real plans to do so either)
 
+        self.static=static
         self.time=0
         self.k = k
         self.nu=nu
@@ -553,14 +555,15 @@ class Elasticity_2d():
                     if i%2 == j%2: # dont mix dimensions
                         M[2*I[i//2] + (i%2),2*I[j//2] + (j%2)] += quadrature.quadrature2d(p0,p1,p2,4, integrand_m)
         self.M = M
-        #for X in M:
-        #    print([x for x in X])
         self.A = A
-        self.MA = np.zeros((4*Np,4*Np))
-        self.MA[:2*Np,:2*Np] = A 
-        self.MA[:2*Np,2*Np:] = M/self.k
-        self.MA[2*Np:,:2*Np] = -np.identity(2*Np)/self.k
-        self.MA[2*Np:,2*Np:] = np.identity(2*Np)
+        if self.static:
+            self.MA = A
+        else:
+            self.MA = np.zeros((4*Np,4*Np))
+            self.MA[:2*Np,:2*Np] = A 
+            self.MA[:2*Np,2*Np:] = M/self.k
+            self.MA[2*Np:,:2*Np] = -np.identity(2*Np)/self.k
+            self.MA[2*Np:,2*Np:] = np.identity(2*Np)
 
         # add Dirichlet bdry
         for line in self.edge:
@@ -569,10 +572,6 @@ class Elasticity_2d():
                 self.MA[2*point+1,:] = 0
                 self.M[2*point,:] = 0
                 self.M[2*point+1,:] = 0
-                self.A[2*point,:] = 0 # Remove this
-                self.A[2*point+1,:] = 0 # Remove this
-                self.A[2*point,2*point] = 1 # Remove this
-                self.A[2*point+1,2*point+1] = 1 # Remove this
                 self.MA[2*point,2*point] = 1
                 self.MA[2*point+1,2*point+1] = 1
         self.MA = spsp.csr_matrix(self.MA)
@@ -618,10 +617,12 @@ class Elasticity_2d():
         Np = len(self.pts)
         self.time += self.k
         self.__make_F()
-        res = spla.spsolve(self.MA, np.concatenate((self.M@w_prev/self.k+self.F+correction, -u_prev/self.k))) #Solve system
-        self.u_fem = res[:2*Np]
-        self.w_fem = res[2*Np:]
-        #self.u_fem = np.linalg.solve(self.A, self.F)
+        if self.static:
+            self.u_fem = spla.spsolve(self.MA, self.F+correction) #Solve system
+        else:
+            res = spla.spsolve(self.MA, np.concatenate((self.M@w_prev/self.k+self.F+correction, -u_prev/self.k))) #Solve system
+            self.u_fem = res[:2*Np]
+            self.w_fem = res[2*Np:]
 
 
     def solve(self, time_steps, u0=None, T=1, callback=None):
@@ -639,7 +640,7 @@ class Elasticity_2d():
             if self.w_ex != None:
                 self.w_fem = np.ravel(self.w_ex(x=self.pts, t=0))
             else:
-                print('w not provided, approximating')
+                #print('w not provided, approximating')
                 self.w_fem = np.ravel(-self.u_ex(x=self.pts, t=0) + self.u_ex(x=self.pts, t=k/10)) * (10/k) # approximate w numerically
 
 
@@ -682,7 +683,7 @@ class Elasticity_2d():
 
 class Disc: # short for disctretizatoin
 
-    def __init__(self, T, time_steps, Ne, equation='heat', p=1, dim=1, xa=0, xb=1, ya=0, yb=1):
+    def __init__(self, T, time_steps, Ne, equation='heat', p=1, dim=1, xa=0, xb=1, ya=0, yb=1, static=False):
         assert p==1 or dim==1
         self.T=T
         self.time_steps = time_steps
@@ -691,6 +692,7 @@ class Disc: # short for disctretizatoin
         self.dim=dim
         self.udim=dim if equation=='elasticity' else 1 # dimensionality of u
         self.equation=equation
+        self.static=static # only relevant for elasticity
         
         if dim == 1:
             self.pts = np.linspace(xa,xb,Ne*p+1) # Note Ne is in each dimension (for now at least)
@@ -725,7 +727,7 @@ class Disc: # short for disctretizatoin
             raise ValueError(f'Dimentionality dim={self.dim} is not implemented')
         elif self.equation == 'elasticity':
             if self.dim == 2:
-                return Elasticity_2d(self.pts, tri=self.tri, edge=self.edge, f=f, p=self.p, u_ex=u_ex, k=self.k, w_ex=w_ex)
+                return Elasticity_2d(self.pts, tri=self.tri, edge=self.edge, f=f, p=self.p, u_ex=u_ex, k=self.k, w_ex=w_ex, static=self.static)
             raise ValueError(f'Dimentionality dim={self.dim} is not implemented')
         raise ValueError(f'Equation name={self.equation} is not implemented')
 

@@ -158,7 +158,7 @@ ELsols3d = [
             }
          ]
 
-def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2, nu=0.25):
+def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2, nu=0.25, static=False):
     '''Manufactures f from the elasticity equation given u (list of sympy equations)
     returns functions with unused dimensions=0'''
     print('manufacturing solution, from', d1, 'to', d2, 'dimensions.')
@@ -209,7 +209,8 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
              
 
     # add transient term; now f = u_tt - Div(sigma)
-    f += np.array([ui.diff(t_var,t_var) for ui in u])
+    if not static:
+        f += np.array([ui.diff(t_var,t_var) for ui in u])
 
     # make lambda functions
     f_temp = lambdify([*[x_vars],t_var,alpha_var],f[:d2], "numpy")

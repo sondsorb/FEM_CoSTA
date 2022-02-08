@@ -698,7 +698,7 @@ class CoSTA_LSTM_solver:
 ###   Solver class compares the different solvers defined above   ###
 #####################################################################
 class Solvers:
-    def __init__(self, sol, equation='heat', models=None, modelnames=None, Ne=10, time_steps=20, p=1, xa=0, xb=1, ya=0, yb=1, dim=1, NNkwargs={}):
+    def __init__(self, sol, equation='heat', models=None, modelnames=None, Ne=10, time_steps=20, p=1, xa=0, xb=1, ya=0, yb=1, dim=1, static=False, NNkwargs={}):
         '''
         either models or modelnames must be specified, not both
         models - list of models
@@ -718,7 +718,8 @@ class Solvers:
                 xa=xa,
                 xb=xb,
                 ya=ya,
-                yb=yb
+                yb=yb,
+                static=False,
                 )
         self.alpha_train = [.1,.2,.3,.4,.5,.6,.9,1,1.2,1.3,1.4,1.6,1.7,1.8,1.9,2]
         self.alpha_val = [.8,1.1]#, 1,8, 0.4]
