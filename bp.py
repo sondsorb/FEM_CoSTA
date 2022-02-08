@@ -115,6 +115,7 @@ model.plot=False
 model.train(figname=figname)
 #model.load_weights(model_folder)
 
+model.plot=True
 figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}{extra_tag}.pdf'
 _ = model.test(interpol = True, figname=figname)
 figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}{extra_tag}.pdf'

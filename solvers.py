@@ -4,7 +4,7 @@ import tensorflow as tf
 import datetime
 from tensorflow import keras
 from tensorflow.keras import layers
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, cm
 import json
 
 import FEM
@@ -931,6 +931,13 @@ class Solvers:
         fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
 
         l2_devs={}
+        if self.disc.dim==2:
+            graphs2d={}
+            N = len(self.disc.pts_line)-1
+            X2d = np.array([np.linspace(-1,1,N+1)]*(N+1)).T
+            Y2d = np.array([np.linspace(-1,1,N+1)]*(N+1))
+            pts2d = np.array([X2d,Y2d]).T
+
         for i, alpha in enumerate(alphas):
             self.sol.set_alpha(alpha)
 
@@ -950,6 +957,9 @@ class Solvers:
                     axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line)[:,0], color=COLORS['FEM'], label='fem')
                 else:
                     axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
+                graphs2d[f'{i}'] = {}
+                graphs2d[f'{i}']['exact'] = self.sol.u(pts2d)
+                graphs2d[f'{i}']['FEM'] = fem_model.solution(pts2d)
 
             # prepare plotting
             prev_name = ''
@@ -975,12 +985,16 @@ class Solvers:
                                 axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS[model.name], label=model.name)
                             if self.disc.dim==2:
                                 axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS[model.name], label=model.name)
+                        if self.disc.dim==2:
+                            graphs2d[f'{i}'][model.name] = []
                     else:
                         if not statplot:
                             if self.disc.dim==1:
                                 axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS[model.name])
                             if self.disc.dim==2:
                                 axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS[model.name])
+                    if self.disc.dim==2:
+                        graphs2d[f'{i}'][model.name].append(fem_model.solution(pts2d))
                     if self.disc.equation == 'elasticity':
                         graphs[model.name].append(fem_model.solution(self.disc.pts_line)[:,0])
                     else:
@@ -1044,7 +1058,75 @@ class Solvers:
             else:
                 plt.close()
 
+        # plot 2d stuff
+        if self.disc.dim==2 and statplot:
+            ud = self.disc.udim
+            nw = ud * len(alphas)
+            nh = len(self.modelnames)+2 # + models + FEM and exact
+            fig = plt.figure(figsize=(4.2*nw,3.2*nh))
+            for i, alpha in enumerate(alphas):
+                for j in range(ud):
+                    if ud==1:
+                        u_ex=graphs2d[f'{i}']['exact']
+                        u_fem=graphs2d[f'{i}']['FEM']
+                    if ud==2:
+                        u_ex=graphs2d[f'{i}']['exact'][:,:,j]
+                        u_fem=graphs2d[f'{i}']['FEM'][:,:,j]
+                    ax = fig.add_subplot(nh,nw,ud*i+j+1)
+                    im = ax.imshow(u_ex, cmap=cm.coolwarm)
+                    plt.colorbar(im, ax=ax)
+                    plt.title(f'exact u[{j}],a={alpha}')
+                    ax = fig.add_subplot(nh,nw,ud*i+j+nw+1)
+                    im = ax.imshow(u_fem-u_ex, cmap=cm.coolwarm)
+                    plt.colorbar(im, ax=ax)
+                    plt.title(f'fem error')
+                    for k, name in enumerate(self.modelnames):
+                        if not model.name in ignore_models:
+                            if ud==1:
+                                u_mean = np.mean(np.array(graphs2d[f'{i}'][name]),axis=0)
+                            if ud==2:
+                                u_mean = np.mean(np.array(graphs2d[f'{i}'][name]),axis=0)[:,:,j]
+                            ax = fig.add_subplot(nh,nw,ud*i+j+nw*(2+k)+1)
+                            im = ax.imshow(u_mean-u_ex, cmap=cm.coolwarm)
+                            plt.colorbar(im, ax=ax)
+                            plt.title(f'mean {name} error')
 
+            if figname != None:
+                plt.savefig(figname[:-4]+'_2d'+'.pdf') # TODO do this in a cleaner way
+            if self.plot:
+                plt.show()
+            else:
+                plt.close()
+
+            nh = len(self.modelnames)+1 # + models + FEM and exact
+            fig = plt.figure(figsize=(4.2*nw,3.2*nh))
+            for i, alpha in enumerate(alphas):
+                for j in range(ud):
+                    if ud==1:
+                        u_ex=graphs2d[f'{i}']['exact']
+                    if ud==2:
+                        u_ex=graphs2d[f'{i}']['exact'][:,:,j]
+                    ax = fig.add_subplot(nh,nw,ud*i+j+1)
+                    im = ax.imshow(u_ex, cmap=cm.coolwarm)
+                    plt.colorbar(im, ax=ax)
+                    plt.title(f'exact u[{j}],a={alpha}')
+                    for k, name in enumerate(self.modelnames):
+                        if not model.name in ignore_models:
+                            if ud==1:
+                                u_std = np.std(np.array(graphs2d[f'{i}'][name]),axis=0, ddof=1)
+                            if ud==2:
+                                u_std = np.std(np.array(graphs2d[f'{i}'][name]),axis=0, ddof=1)[:,:,j]
+                            ax = fig.add_subplot(nh,nw,ud*i+j+nw*(1+k)+1)
+                            im = ax.imshow(u_mean-u_ex, cmap=cm.coolwarm)
+                            plt.colorbar(im, ax=ax)
+                            plt.title(f'std {name} error')
+
+            if figname != None:
+                plt.savefig(figname[:-4]+'_2d_std'+'.pdf') # TODO do this in a cleaner way
+            if self.plot:
+                plt.show()
+            else:
+                plt.close()
 
         print('scores for last alpha (L2, l2):',L2_scores, l2_scores) # TODO? print earlier for both alphas
         return L2_scores, l2_scores
