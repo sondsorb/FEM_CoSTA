@@ -92,7 +92,7 @@ NNkwargs = {
 #assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
 
 xa,xb,ya,yb = -1,1,-1,1
-for i in [2,1,0]:
+for i in [0,1,2]:
     print(f'sol_index: {i}\n')
     T = 1
     if source == 'reduced_source':
@@ -105,10 +105,9 @@ for i in [2,1,0]:
     extra_tag = '' # for different names when testing specific stuff
     figname = None
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/loss_sol{i}{extra_tag}.pdf'
-    model_folder = None
-    model.plot=True
-    #model.train(figname=figname, model_folder = model_folder)
-    model.train(figname=figname)
+    model_folder = f'../master/saved_models/2d_elastic/{source}/{mode}/{"static_"if static else ""}interpol{extra_tag}/'#_explosions/'
+    model.plot=False
+    model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
     
     #model.plot=True
