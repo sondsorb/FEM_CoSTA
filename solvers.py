@@ -91,8 +91,6 @@ class Solvers:
                     self.modelnames[model.name] += 1
                 else:
                     self.modelnames[model.name] = 1
-
-        #quit()
         self.create_data()
 
 
@@ -252,29 +250,21 @@ class Solvers:
         #        plt.show()
 
 
-    def test(self, interpol = True, figname=None, statplot = 5, ignore_models=[]):
+    def test(
+            self, 
+            interpol = True, 
+            result_folder = None,
+            ):
         '''
         interpol - (bool) use interpolating or extrapolating alpha set
-        figname - (string or None) filename to save figure to. Note saved if None.
-        statplot - (bool or int) if plots should be of mean and variance (instead of every solution). If int, then statplot is set to len(models)>statplot
-        ignore_models - (list of str) names of models not to include in plots. FEM always included.
         '''
         start_time = datetime.datetime.now()
         alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
 
-        # prepare plotting
-        figsize = (6,4)
-        if type(statplot) == int:
-            statplot = len(self.models) > statplot
-        fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
-
         l2_devs={}
-        if self.disc.dim==2:
-            graphs2d={}
-            N = len(self.disc.pts_line)-1
-            X2d = np.array([np.linspace(-1,1,N+1)]*(N+1)).T
-            Y2d = np.array([np.linspace(-1,1,N+1)]*(N+1))
-            pts2d = np.array([X2d,Y2d]).T
+        L2_scores={}
+        l2_scores={}
+        final_solutions={}
 
         for i, alpha in enumerate(alphas):
             self.sol.set_alpha(alpha)
@@ -288,62 +278,122 @@ class Solvers:
             self.l2_development = []
             fem_model = self.disc.make_model(self.sol.f, self.sol.u, w_ex=self.sol.w)
             fem_model.solve(self.disc.time_steps, T = self.disc.T, callback = relative_l2_callback)
-            if self.disc.dim==1:
-                axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
-            if self.disc.dim==2:
-                if self.disc.equation == 'elasticity':
-                    axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line)[:,0], color=COLORS['FEM'], label='fem')
-                else:
-                    axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
-                graphs2d[f'{i}'] = {}
-                graphs2d[f'{i}']['exact'] = self.sol.u(pts2d)
-                graphs2d[f'{i}']['FEM'] = fem_model.solution(pts2d)
 
             # prepare plotting
             prev_name = ''
-            graphs = {}
-            L2_scores = {'FEM' : [fem_model.relative_L2()]}
+            L2_scores[alpha] = {'FEM' : [fem_model.relative_L2()]}
             def rel_l2() : return np.sqrt(np.mean((fem_model.u_fem-self.disc.format_u(fem_model.u_ex(self.disc.pts,self.disc.T)))**2)) / np.sqrt(np.mean(self.disc.format_u(fem_model.u_ex(self.disc.pts,self.disc.T)**2)))
-            l2_scores = {'FEM' : [rel_l2()]}
+            l2_scores[alpha] = {'FEM' : [rel_l2()]}
             l2_devs[alpha]= {'FEM' : [self.l2_development]}
+            final_solutions[alpha] = {'FEM' : [fem_model.u_fem.tolist()]}
             
             for model in self.models:
-                if not model.name in ignore_models:
+                self.l2_development = []
+                fem_model.u_fem = model(self.sol.f,self.sol.u,alpha,callback=relative_l2_callback, w_ex=self.sol.w) # store in fem_model for easy use of relative_l2 and soltion functoins
+                if prev_name != model.name:
+                    prev_name = model.name
+                    L2_scores[alpha][model.name] = []
+                    l2_scores[alpha][model.name] = []
+                    l2_devs[alpha][model.name] = []
+                    final_solutions[alpha][model.name] = []
+                L2_scores[alpha][model.name].append(fem_model.relative_L2())
+                l2_scores[alpha][model.name].append(rel_l2())
+                l2_devs[alpha][model.name].append(self.l2_development)
+                final_solutions[alpha][model.name].append(fem_model.u_fem.tolist())
 
+        if result_folder != None:
+            # save final_solutions and l2 devs
+            with open(result_folder+f'sol{self.sol.name}_final_solutions.json', "w") as f:
+                f.write(json.dumps(final_solutions))
+            with open(result_folder+f'sol{self.sol.name}_l2_devs.json', "w") as f:
+                f.write(json.dumps(l2_devs))
+
+        print(f'\nTime testing: {datetime.datetime.now()-start_time}')
+        print(f'scores, (l2):',l2_scores)
+
+        return L2_scores, l2_scores
+
+    def plot_results(
+            self, 
+            result_folder,
+            interpol = True, 
+            figname=None, 
+            statplot = 5, 
+            ignore_models=[]
+            ):
+        '''
+        interpol - (bool) use interpolating or extrapolating alpha set
+        figname - (string or None) filename to save figure to. Note saved if None.
+        statplot - (bool or int) if plots should be of mean and variance (instead of every solution). If int, then statplot is set to len(models)>statplot
+        ignore_models - (list of str) names of models not to include in plots. FEM always included.
+        '''
+        
+        # load stuff to plot
+        with open(result_folder+f'sol{self.sol.name}_final_solutions.json') as f:
+            final_solutions = json.load(f)
+        with open(result_folder+f'sol{self.sol.name}_l2_devs.json') as f:
+            l2_devs = json.load(f)
+
+        alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
+
+        # prepare plotting
+        figsize = (6,4)
+        if type(statplot) == int:
+            statplot = len(self.models) > statplot
+        fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
+
+        graphs1d={}
+        if self.disc.dim==2:
+            graphs2d={}
+            N = len(self.disc.pts_line)-1
+            X2d = np.array([np.linspace(-1,1,N+1)]*(N+1)).T
+            Y2d = np.array([np.linspace(-1,1,N+1)]*(N+1))
+            pts2d = np.array([X2d,Y2d]).T
+
+        for i, alpha in enumerate(alphas):
+            self.sol.set_alpha(alpha)
+
+            fem_model = self.disc.make_model(self.sol.f, self.sol.u, w_ex=self.sol.w)
+            fem_model.u_fem = np.array(final_solutions[f'{alpha}']['FEM'][0])
+            graphs1d[alpha]={}
+            #if self.disc.dim==1:
+                #axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
+            graphs1d[alpha]['exact'] = self.sol.u(self.disc.pts_line)
+            graphs1d[alpha]['FEM'] = fem_model.solution(self.disc.pts_line)
+            if self.disc.dim==2:
+                if self.disc.equation == 'elasticity':
+                    axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line)[:,0], color=COLORS['FEM'], label='fem')
+                    graphs1d[alpha]['exact'] = self.sol.u(self.disc.pts_line)[:,0] # only first component is plotted in graph1d for elasticity
+                    graphs1d[alpha]['FEM'] = fem_model.solution(self.disc.pts_line)[:,0]
+                graphs2d[alpha] = {}
+                graphs2d[alpha]['exact'] = self.sol.u(pts2d)
+                graphs2d[alpha]['FEM'] = fem_model.solution(pts2d)
+            prev_name = ''
+            j=0
+            for model in self.models:
+                if not model.name in ignore_models:
                     self.l2_development = []
-                    fem_model.u_fem = model(self.sol.f,self.sol.u,alpha,callback=relative_l2_callback, w_ex=self.sol.w) # store in fem_model for easy use of relative_l2 and soltion functoins
                     if prev_name != model.name:
                         prev_name = model.name
-                        graphs[model.name] = []
-                        L2_scores[model.name] = []
-                        l2_scores[model.name] = []
-                        l2_devs[alpha][model.name] = []
-                        if not statplot:
-                            if self.disc.dim==1:
-                                axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS[model.name], label=model.name)
-                            if self.disc.dim==2:
-                                axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS[model.name], label=model.name)
-                        if self.disc.dim==2:
-                            graphs2d[f'{i}'][model.name] = []
-                    else:
-                        if not statplot:
-                            if self.disc.dim==1:
-                                axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS[model.name])
-                            if self.disc.dim==2:
-                                axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line), color=COLORS[model.name])
-                    if self.disc.dim==2:
-                        graphs2d[f'{i}'][model.name].append(fem_model.solution(pts2d))
-                    if self.disc.equation == 'elasticity':
-                        graphs[model.name].append(fem_model.solution(self.disc.pts_line)[:,0])
-                    else:
-                        graphs[model.name].append(fem_model.solution(self.disc.pts_line))
-                    L2_scores[model.name].append(fem_model.relative_L2())
-                    l2_scores[model.name].append(rel_l2())
-                    l2_devs[alpha][model.name].append(self.l2_development)
+                        j=0
+                        graphs1d[alpha][model.name] = []
 
-            if statplot:
-                for name in graphs:
-                    curr_graphs = np.array(graphs[name])
+                        if self.disc.dim==2:
+                            graphs2d[alpha][model.name] = []
+                    fem_model.u_fem = np.array(final_solutions[f'{alpha}'][model.name][j])
+                    if self.disc.dim==2:
+                        graphs2d[alpha][model.name].append(fem_model.solution(pts2d))
+                    if self.disc.equation == 'elasticity':
+                        graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line)[:,0])
+                    else:
+                        graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line))
+                    j+=1
+
+        # plot 1d final solutions
+        for i, alpha in enumerate(alphas):
+            for name in graphs1d[alpha]:
+                curr_graphs = np.array(graphs1d[alpha][name])
+                if statplot and not name in ['FEM', 'exact']:
                     mean = np.mean(curr_graphs, axis=0)
                     std = np.std(curr_graphs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
                     if self.disc.dim==1:
@@ -352,6 +402,12 @@ class Solvers:
                     if self.disc.dim==2:
                         axs[i].plot(self.disc.pts_line[:,0], mean, color=COLORS[name])
                         axs[i].fill_between(self.disc.pts_line[:,0], mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
+                elif not name in ['FEM', 'exact']: # not statplot
+                    line=self.disc.pts_line
+                    if self.disc.dim==2:
+                        line=line[:,0]
+                    for k, graph in enumerate(curr_graphs):
+                        axs[i].plot(line, graph, color=COLORS[model.name], label=name if k==0 else None)
             if self.disc.dim==1:
                 axs[i].plot(self.disc.pts_line, self.sol.u(self.disc.pts_line), 'k--', label='exact')
             if self.disc.dim==2:
@@ -361,8 +417,7 @@ class Solvers:
                     axs[i].plot(self.disc.pts_line[:,0], self.sol.u(self.disc.pts_line), 'k--', label='exact')
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
-            print(f'scores for alpha={alpha}, (l2):',l2_scores)
-        print(f'\nTime testing: {datetime.datetime.now()-start_time}')
+
         plt.tight_layout()
         if figname != None:
             plt.savefig(figname)
@@ -372,30 +427,30 @@ class Solvers:
             plt.close()
 
         # Plot l2 development:
-        if statplot: # not implemented otherwise
-            fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
-            for i, alpha in enumerate(alphas):
-                axs[i].set_yscale('log')
-                for name in l2_devs[alpha]:
-                    curr_devs = np.array(l2_devs[alpha][name])
-                    mean = np.mean(curr_devs, axis=0)
-                    if name!='FEM': # TODO use length instead, to open for nonstatplot
-                        axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
-                        std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
-                        axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)
-                    else:
-                        axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name], label=name)
+        fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
+        for i, alpha in enumerate(alphas):
+            axs[i].set_yscale('log')
+            for name in l2_devs[f'{alpha}']:
+                curr_devs = np.array(l2_devs[f'{alpha}'][name])
+                mean = np.mean(curr_devs, axis=0)
+                if statplot and name!='FEM': # TODO use length instead, to open for nonstatplot
+                    axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
+                    std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
+                    axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)
+                else:
+                    for k, dev in enumerate(curr_devs):
+                        axs[i].plot(np.arange(len(mean)), dev, color=COLORS[name], label=name if k==0 else None)
 
-                axs[i].grid()
-                axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+            axs[i].grid()
+            axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
-            plt.tight_layout()
-            if figname != None:
-                plt.savefig(figname[:-4]+'_devs'+'.pdf') # TODO do this in a cleaner way
-            if self.plot:
-                plt.show()
-            else:
-                plt.close()
+        plt.tight_layout()
+        if figname != None:
+            plt.savefig(figname[:-4]+'_devs'+'.pdf') # TODO do this in a cleaner way
+        if self.plot:
+            plt.show()
+        else:
+            plt.close()
 
         # plot 2d stuff
         if self.disc.dim==2 and statplot:
@@ -406,11 +461,11 @@ class Solvers:
             for i, alpha in enumerate(alphas):
                 for j in range(ud):
                     if ud==1:
-                        u_ex=graphs2d[f'{i}']['exact']
-                        u_fem=graphs2d[f'{i}']['FEM']
+                        u_ex=graphs2d[alpha]['exact']
+                        u_fem=graphs2d[alpha]['FEM']
                     if ud==2:
-                        u_ex=graphs2d[f'{i}']['exact'][:,:,j]
-                        u_fem=graphs2d[f'{i}']['FEM'][:,:,j]
+                        u_ex=graphs2d[alpha]['exact'][:,:,j]
+                        u_fem=graphs2d[alpha]['FEM'][:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
@@ -422,9 +477,9 @@ class Solvers:
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
                             if ud==1:
-                                u_mean = np.mean(np.array(graphs2d[f'{i}'][name]),axis=0)
+                                u_mean = np.mean(np.array(graphs2d[alpha][name]),axis=0)
                             if ud==2:
-                                u_mean = np.mean(np.array(graphs2d[f'{i}'][name]),axis=0)[:,:,j]
+                                u_mean = np.mean(np.array(graphs2d[alpha][name]),axis=0)[:,:,j]
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(2+k)+1)
                             im = ax.imshow(u_mean-u_ex, cmap=cm.coolwarm)
                             plt.colorbar(im, ax=ax)
@@ -442,9 +497,9 @@ class Solvers:
             for i, alpha in enumerate(alphas):
                 for j in range(ud):
                     if ud==1:
-                        u_ex=graphs2d[f'{i}']['exact']
+                        u_ex=graphs2d[alpha]['exact']
                     if ud==2:
-                        u_ex=graphs2d[f'{i}']['exact'][:,:,j]
+                        u_ex=graphs2d[alpha]['exact'][:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
@@ -452,9 +507,9 @@ class Solvers:
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
                             if ud==1:
-                                u_std = np.std(np.array(graphs2d[f'{i}'][name]),axis=0, ddof=1)
+                                u_std = np.std(np.array(graphs2d[alpha][name]),axis=0, ddof=1)
                             if ud==2:
-                                u_std = np.std(np.array(graphs2d[f'{i}'][name]),axis=0, ddof=1)[:,:,j]
+                                u_std = np.std(np.array(graphs2d[alpha][name]),axis=0, ddof=1)[:,:,j]
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(1+k)+1)
                             im = ax.imshow(u_std, cmap=cm.coolwarm)
                             plt.colorbar(im, ax=ax)
@@ -466,5 +521,3 @@ class Solvers:
                 plt.show()
             else:
                 plt.close()
-
-        return L2_scores, l2_scores # TODO remove this?

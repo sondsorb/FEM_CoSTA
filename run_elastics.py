@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib import pyplot as plt, cm
 import sys
 import sympy as sp
+import utils
 
 mode = 'bugfix'
 if len(sys.argv)>1:
@@ -105,14 +106,27 @@ for i in [0,1,2]:
     extra_tag = '' # for different names when testing specific stuff
     figname = None
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/loss_sol{i}{extra_tag}.pdf'
-    model_folder = f'../master/saved_models/2d_elastic/{source}/{mode}/{"static_"if static else ""}interpol{extra_tag}/'#_explosions/'
+    model_folder = f'../master/saved_models/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/'#_explosions/'
     model.plot=False
-    model.train(figname=figname, model_folder = model_folder)
-    #model.load_weights(model_folder)
+    #model.train(figname=figname, model_folder = model_folder)
+    model.load_weights(model_folder)
     
     #model.plot=True
-    figname = None
+
+    # Interpolation
+    result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'
+    utils.makefolder(result_folder)
+    #_ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}.pdf'
-    _ = model.test(interpol = True, figname=figname)
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
+
+    # Extrapolation
+    result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/extrapol/'
+    utils.makefolder(result_folder)
+    _ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}.pdf'
-    _ = model.test(interpol = False, figname=figname)
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
