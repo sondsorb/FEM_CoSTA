@@ -105,3 +105,76 @@ Starting new tuning iteration. Configs now: {'n_layers_1': 4, 'n_layers_2': 2, '
 2022-01-20 19:00:09.103283
 Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
 
+
+
+
+2022-02-26 00:23:58.392226
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-26 00:24:12.757768
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-26 00:24:25.713276
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 20, 'bn_depth': 4, 'lr': 0.005, 'patience': [10, 20], 'epochs': [100, 100], 'min_epochs': [50, 50], 'l1_penalty': 0.01}
+Score to beat: 0.06539086257181381
+
+
+
+2022-02-26 00:33:37.125180
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 20, 'bn_depth': 4, 'lr': 0.005, 'patience': [10, 20], 'epochs': [100, 100], 'min_epochs': [50, 50], 'l1_penalty': 0.01}
+Score to beat: 0.05663570029630331
+
+
+
+2022-02-26 00:41:59.110996
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 20, 'bn_depth': 4, 'lr': 0.005, 'l1_penalty': 0.01}
+Score to beat: 0.033788431800116994
+Changing l1_penalty from 0.01 by adding -0.005
+new score 0.017792267405819993
+Changing l1_penalty from 0.005 by adding -0.0025
+new score 0.008246696379202379
+Changing l1_penalty from 0.0025 by adding -0.00125
+new score 0.008609658244716248
+Changing n_layers_1 from 1 by adding 1
+new score 0.010952690917437198
+Changing bn_depth from 4 by adding 1
+new score 0.012961214174015672
+Changing bn_depth from 4 by adding -1
+new score 0.006881668505902775
+Changing bn_depth from 3 by adding -1
+new score 0.01315856151005166
+Changing n_layers_2 from 2 by adding -1
+new score 0.01198127720098175
+Changing n_layers_2 from 2 by adding 1
+new score 0.015228231404082793
+Changing depth from 20 by adding -5
+new score 0.01737868813681608
+Changing depth from 20 by adding 5
+new score 0.02034489879867273
+Changing lr from 0.005 by adding 1
+new score 3.579033450937351e+24
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 20, 'bn_depth': 3, 'lr': 0.005, 'l1_penalty': 0.0025}
+Score to beat: 0.014842431623134932
+Changing n_layers_1 from 1 by adding 1
+new score 0.013294072817374913
+Changing n_layers_1 from 2 by adding 1
+new score 0.012350898798665142
+Changing n_layers_1 from 3 by adding 1
+new score 0.012732950942054934
+Changing bn_depth from 3 by adding 1
+new score 0.012984355830338688
+Changing bn_depth from 3 by adding -1
+new score 0.011534396033841966
+Changing bn_depth from 2 by adding -1

@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt, cm
 import sys
 import sympy as sp
 import utils
+import parameters
 
 mode = 'bugfix'
 if len(sys.argv)>1:
@@ -21,35 +22,8 @@ else:
     print('1: quick_test')
     print('2: full_test')
     print('syntax e.g.: python testing.py 2')
-def set_args(mode=mode):
-    print(f'\nTesting with mode "{mode}"...')
-    global Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, NoM, time_delta
-    if mode == 'bugfix':
-        Ne = 3
-        time_steps = 10
-        DNNkwargs = {'n_layers':6,'depth':20, 'bn_depth':4,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
-        pgDNNkwargs = {'n_layers_1':4,'n_layers_2':2,'depth':20,'bn_depth':4,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}#, 'l1_penalty':0.01}
-        LSTMkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'lr':5e-3, 'patience':[10,10], 'epochs':[100,100], 'min_epochs':[50,50]}
-        NoM = 3
-        time_delta = 5
-    elif mode == 'quick_test':
-        Ne = 8
-        time_steps = 500
-        DNNkwargs = {'n_layers':6,'depth':80, 'bn_depth':8, 'lr':8e-5, 'patience':[20,20]}
-        pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'depth':80,'bn_depth':8,'lr':8e-5,'patience':[20,20]}
-        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20]}
-        NoM=4
-        time_delta = 0.3 # max 30 steps back
-    elif mode == 'full_test':
-        Ne = 12
-        time_steps = 5000
-        DNNkwargs = {'n_layers':6,'depth':80, 'bn_depth':8, 'lr':1e-5, 'patience':[20,20]}
-        pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'depth':80,'bn_depth':8,'lr':1e-5,'patience':[20,20]}
-        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20]}
-        NoM=10
-        time_delta = 0
 
-set_args()
+Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = mode, dim=2)
 
 if len(sys.argv)>2:
     if sys.argv[2]=='bp':
@@ -117,16 +91,16 @@ for i in [0,1,2]:
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
     _ = model.test(interpol = True, result_folder=result_folder)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
 
     # Extrapolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/extrapol/'
     utils.makefolder(result_folder)
     _ = model.test(interpol = False, result_folder=result_folder)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}.pdf'
+    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)

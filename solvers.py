@@ -82,6 +82,8 @@ class Solvers:
                         self.models.append(methods.CoSTA_pgLSTM_solver(disc=self.disc, **(NNkwargs[modelname])))
                     else:
                         print(f'WARNING!!!! model named {modelname} not implemented')
+                #print(modelname)
+                #self.models[-1].model.summary()
 
         if models != None:
             self.models = models
@@ -191,7 +193,7 @@ class Solvers:
         print(f'\nTime training all models: {datetime.datetime.now()-start_time}')
 
         if figname != None:
-            plt.savefig(figname)
+            plt.savefig(figname+'.pdf')
         if self.plot:
             plt.show()
         else:
@@ -434,7 +436,7 @@ class Solvers:
             for name in l2_devs[f'{alpha}']:
                 curr_devs = np.array(l2_devs[f'{alpha}'][name])
                 mean = np.mean(curr_devs, axis=0)
-                if statplot and name!='FEM': # TODO use length instead, to open for nonstatplot
+                if statplot and name!='FEM':
                     axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
                     std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
                     axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)
@@ -447,7 +449,7 @@ class Solvers:
 
         plt.tight_layout()
         if figname != None:
-            plt.savefig(figname[:-4]+'_devs'+'.pdf') # TODO do this in a cleaner way
+            plt.savefig(figname+'_devs.pdf')
         if self.plot:
             plt.show()
         else:
@@ -487,7 +489,7 @@ class Solvers:
                             plt.title(f'mean {name} error')
 
             if figname != None:
-                plt.savefig(figname[:-4]+'_2d'+'.pdf') # TODO do this in a cleaner way
+                plt.savefig(figname+'_2d.pdf')
             if self.plot:
                 plt.show()
             else:
@@ -517,7 +519,7 @@ class Solvers:
                             plt.title(f'std {name} error')
 
             if figname != None:
-                plt.savefig(figname[:-4]+'_2d_std'+'.pdf') # TODO do this in a cleaner way
+                plt.savefig(figname+'_2d_std.pdf')
             if self.plot:
                 plt.show()
             else:

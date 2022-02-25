@@ -16,32 +16,26 @@ def lrelu(x):
     #return tf.keras.activations.relu(x, alpha=0.3)#, threshold=0,  max_value=0.01)
 #lrelu=keras.activations.sigmoid
 
-def get_DNN(input_shape, output_length, n_layers, depth, bn_depth, lr): #TODO remove/change arguments, and use them
+def get_DNN(input_shape, output_length, depth, bn_depth, lr, n_layers_1=1, n_layers_2=2, l1_penalty=0, activation=lrelu):
 
-    model = keras.Sequential(
-        [
-            layers.Dense(
-                depth,
-                activation=lrelu,
-                input_shape=input_shape,
-                ),
-        ] + [
-            layers.Dense(
-                depth2,#depth, #TODO fix this temporary workaround
-                activation=lrelu,
-                )
-            for depth2 in [bn_depth,depth,depth]] + [ #for i in range(n_layers-3)] + [
-            layers.Dense(
-                output_length,
-                ),
-        ]
-    )
+    L1_reg = keras.regularizers.L1(l1=l1_penalty)
+    inputs = keras.Input(shape=input_shape)
+    x = inputs
+
+    for i in range(n_layers_1):
+        x = layers.Dense(depth,activation=activation, kernel_regularizer=L1_reg)(x)
+    x = layers.Dense(bn_depth,activation=activation, kernel_regularizer=L1_reg)(x)
+
+    for i in range(n_layers_2):
+        x = layers.Dense(depth,activation=activation, kernel_regularizer=L1_reg)(x)
+    x = layers.Dense(output_length,kernel_regularizer=L1_reg)(x)
+
+    model = keras.Model(inputs=inputs, outputs=x)
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
-    #model.summary()
     return model
 
-def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, depth, bn_depth, n_layers_2, lr, l1_penalty=0): #TODO: remove/change arguments, and use them
+def get_pgDNN(input_shape_1, input_shape_2, output_length, depth, bn_depth, lr, n_layers_1=1, n_layers_2=2, l1_penalty=0, activation=lrelu):
     '''
     Fully connected nerual network with 2 inputs, one at the start and one at a bottleneck
     '''
@@ -50,8 +44,9 @@ def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, depth, bn
     inputs_1 = keras.Input(shape=input_shape_1)
     x = inputs_1
 
-    for current_depth in [depth,bn_depth]:
-        x = layers.Dense(current_depth,activation=lrelu, kernel_regularizer=L1_reg)(x)
+    for i in range(n_layers_1):
+        x = layers.Dense(depth,activation=activation, kernel_regularizer=L1_reg)(x)
+    x = layers.Dense(bn_depth,activation=activation, kernel_regularizer=L1_reg)(x)
     model_1 = keras.Model(inputs_1, x)
 
     inputs_2 = keras.Input(shape=input_shape_2)
@@ -60,15 +55,14 @@ def get_pgDNN(input_shape_1, input_shape_2, output_length, n_layers_1, depth, bn
 
     combined_input = layers.concatenate([model_1.output, model_2.output])
     x = combined_input 
-    for current_depth in [depth,depth]:
-        x = layers.Dense(current_depth,activation=lrelu, kernel_regularizer=L1_reg)(x)
+    for i in range(n_layers_2):
+        x = layers.Dense(depth,activation=activation, kernel_regularizer=L1_reg)(x)
     x = layers.Dense(output_length,kernel_regularizer=L1_reg)(x)
 
 
     model = keras.Model(inputs=[model_1.input, model_2.input], outputs=x)
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
-    #model.summary()
     return model
 
 def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr, dropout_level=0):
@@ -90,7 +84,6 @@ def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers,
 
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
-    #model.summary()
     return model
 
 def get_pgLSTM(input_shape_1, input_shape_2, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr, dropout_level=0):
@@ -114,7 +107,6 @@ def get_pgLSTM(input_shape_1, input_shape_2, output_length, dense_layers, dense_
     model = keras.Model(inputs=[model_1.input, model_2.input], outputs=x)
     opt = keras.optimizers.Adam(learning_rate=lr)
     model.compile(loss='mse', optimizer=opt)
-    #model.summary()
     return model
 
 

@@ -1,29 +1,35 @@
 import solvers
 import functions
+import parameters
+import FEM
+import methods
 
 import datetime
 import numpy as np
 
 # Configs for tuning:
-debug_mode = True
+debug_mode = False
 #modelname = 'LSTM'
-modelname = 'CoSTA_LSTM'
-#modelname = 'CoSTA_pgDNN'
-NoM = 3
+#modelname = 'CoSTA_LSTM'
+modelname = 'CoSTA_pgDNN'
 T = 5
 rate = 0.25 # Rate to change parameters
 p=1
 
 
 if debug_mode:
-    Ne = 5
-    time_steps = 20
+    Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = 'bugfix', dim=1)
     if modelname=='LSTM':
-        nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3}
+        nnkwargs = LSTMkwargs
+        #nnkwargs['dropout_level'] = 0.2
+        #nnkwargs['noise_level'= 1e-3
     elif modelname=='CoSTA_LSTM':
-        nnkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'input_period':5, 'noise_level':1e-3, 'dropout_level':0.2}
+        nnkwargs = LSTMkwargs
+        #nnkwargs['dropout_level'] = 0.2
+        #nnkwargs['noise_level'= 1e-3
     elif modelname=='CoSTA_pgDNN':
-        nnkwargs = {'n_layers_1':4,'n_layers_2':2,'max_depth':20,'min_depth':8,'l1_penalty':0.01}
+        nnkwargs = pgDNNkwargs
+        nnkwargs['l1_penalty']=0.01
     else:
         print('implement this first')
         quit()
@@ -31,19 +37,26 @@ if debug_mode:
     NoM = 2
     time_delta = 5
 else:
+    Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = 'quick_test', dim=1)
     Ne = 20
     time_steps = 500
     if modelname=='LSTM' or modelname=='CoSTA_LSTM':
-        nnkwargs = {'lstm_layers': 2, 'lstm_depth': 62, 'dense_layers': 1, 'dense_depth': 75, 'input_period': 18, 'dropout_level': 0.2, 'noise_level': 0.0005}
-        #{'lstm_layers':2, 'lstm_depth':62, 'dense_layers':1, 'dense_depth':80, 'input_period':30, 'dropout_level':0.2, 'noise_level':1e-3}
+        nnkwargs = LSTMkwargs
+        #nnkwargs['dropout_level'] = 0.2
+        #nnkwargs['noise_level'= 1e-3
     elif modelname=='CoSTA_pgDNN':
-        nnkwargs = {'n_layers_1':3,'n_layers_2':4,'max_depth':125,'min_depth':5,'l1_penalty':0.001}
+        nnkwargs = pgDNNkwargs
+        nnkwargs['l1_penalty']=0.01
     else:
         print('implement this first')
         quit()
     trainkwargs = {'lr':8e-5, 'patience':[20,20], 'epochs':[2000,2000], 'min_epochs':[50,50]}
-    NoM = 1
+    NoM = 2
     time_delta = 0.5
+# These trainkwargs may be in nnkwargs from parameters.py, we dont want that
+nnkwargs.pop('patience')
+nnkwargs.pop('epochs')
+nnkwargs.pop('min_epochs')
 
 Np = Ne+1
 pts = np.linspace(0,1,Np)
@@ -54,6 +67,17 @@ def output(text):
         f.write(text)
 output(f'\n\n\n{datetime.datetime.now()}\nUsing training parameters: time_steps={time_steps}, {trainkwargs}\n\n')
 
+disc = FEM.Disc(
+        equation='heat',
+        T=T,
+        time_steps=time_steps,
+        Ne=Ne,
+        p=p,
+        dim=1,
+        xa=0,
+        xb=1,
+        static=False,
+        )
 
 def get_models(trainkwargs, nnkwargs):
     models=[]
@@ -62,13 +86,13 @@ def get_models(trainkwargs, nnkwargs):
         #if modelname == 'DNN':
         #    models.append(solvers.DNN_solver(T=T, pts=pts, time_steps=time_steps, Np=Np, **DNNkwargs))
         if modelname == 'LSTM':
-            models.append(solvers.LSTM_solver(T=T, pts=pts, time_steps=time_steps, Np=Np, **kwargs))
+            models.append(methods.LSTM_solver(disc, **kwargs))
         #if modelname == 'CoSTA_DNN':
         #    models.append(solvers.CoSTA_DNN_solver(T=T, Np=Np, pts=pts, time_steps=time_steps, **DNNkwargs))
         elif modelname == 'CoSTA_LSTM':
-            models.append(solvers.CoSTA_LSTM_solver(p=p,T=T, Np=Np, pts=pts, time_steps=time_steps, **kwargs))
+            models.append(methods.CoSTA_LSTM_solver(disc, **kwargs))
         elif modelname == 'CoSTA_pgDNN':
-            models.append(solvers.CoSTA_pgDNN_solver(p=p,T=T, Np=Np, pts=pts, time_steps=time_steps, **kwargs))
+            models.append(methods.CoSTA_pgDNN_solver(disc, **kwargs))
         else:
             print('implement this first')
             quit()
@@ -99,9 +123,13 @@ def get_score(nnkwargs, i, tag=''):
     s0.train(figname)
     figname = f'../preproject/1d_heat_figures/tunetraining/{modelname}_{i}_{tag}_sol1.pdf'
     s1.train(figname)
+    s0_res = s0.test()[1]
+    s1_res = s1.test()[1]
     score = np.mean( [
-        *s0.test()[1][modelname],
-        *s1.test()[1][modelname]
+        *s0_res[0.7][modelname],
+        *s1_res[0.7][modelname],
+        *s0_res[1.5][modelname],
+        *s1_res[1.5][modelname],
         ])
     return score
 

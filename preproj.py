@@ -3,6 +3,7 @@ import quadrature
 import FEM
 import solvers
 import functions
+import parameters
 from matplotlib import pyplot as plt
 import sys
 import utils
@@ -20,38 +21,7 @@ else:
     print('2: full_test')
     print('syntax e.g.: python testing.py 2')
 
-
-
-
-def set_args(mode=mode):
-    print(f'\nTesting with mode "{mode}"...')
-    global Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, NoM, time_delta
-    if mode == 'bugfix':
-        Ne = 5
-        time_steps = 20
-        DNNkwargs = {'n_layers':6,'depth':20, 'bn_depth':4,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
-        pgDNNkwargs = {'n_layers_1':4,'n_layers_2':2,'depth':20,'bn_depth':4,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}#, 'l1_penalty':0.01}
-        LSTMkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'lr':5e-3, 'patience':[10,10], 'epochs':[100,100], 'min_epochs':[50,50]}
-        NoM = 2
-        time_delta = 5
-    elif mode == 'quick_test':
-        Ne = 20
-        time_steps = 500
-        DNNkwargs = {'n_layers':6,'depth':80, 'bn_depth':8, 'lr':8e-5, 'patience':[20,20]}
-        pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'depth':80,'bn_depth':8,'lr':8e-5,'patience':[20,20]}
-        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20]}
-        NoM=3
-        time_delta = 0.3 # max 30 steps back
-    elif mode == 'full_test':
-        Ne = 20
-        time_steps = 5000
-        DNNkwargs = {'n_layers':6,'depth':80, 'bn_depth':8, 'lr':1e-5, 'patience':[20,20]}
-        pgDNNkwargs = {'n_layers_1':3,'n_layers_2':4,'depth':80,'bn_depth':8,'lr':1e-5,'patience':[20,20]}
-        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20]}
-        NoM=10
-        time_delta = 0
-
-set_args()
+Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = mode, dim=1)
 
 if len(sys.argv)>2:
     if sys.argv[2]=='f':
@@ -108,18 +78,18 @@ for sol_index in [4,1,2,3]:
     result_folder = f'../preproject/saved_results/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
     _ = model.test(interpol = True, result_folder=result_folder)
-    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}{extra_tag}.pdf'
+    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
-    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}_nonstat{extra_tag}.pdf'
+    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}_nonstat{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
 
     # Extrapolation
     result_folder = f'../preproject/saved_results/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/extrapol/'
     utils.makefolder(result_folder)
     _ = model.test(interpol = False, result_folder=result_folder)
-    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}{extra_tag}.pdf'
+    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
-    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}_nonstat{extra_tag}.pdf'
+    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}_nonstat{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
 
     #extra_tag = '_xxpol'
