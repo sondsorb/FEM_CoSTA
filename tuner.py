@@ -54,9 +54,9 @@ else:
     NoM = 2
     time_delta = 0.5
 # These trainkwargs may be in nnkwargs from parameters.py, we dont want that
-nnkwargs.pop('patience')
-nnkwargs.pop('epochs')
-nnkwargs.pop('min_epochs')
+nnkwargs.pop('patience', 0)
+nnkwargs.pop('epochs', 0)
+nnkwargs.pop('min_epochs', 0)
 
 Np = Ne+1
 pts = np.linspace(0,1,Np)
