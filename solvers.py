@@ -391,6 +391,7 @@ class Solvers:
 
         # plot 1d final solutions
         for i, alpha in enumerate(alphas):
+            self.sol.set_alpha(alpha)
             for name in graphs1d[alpha]:
                 curr_graphs = np.array(graphs1d[alpha][name])
                 if statplot and not name in ['FEM', 'exact']:
@@ -407,7 +408,7 @@ class Solvers:
                     if self.disc.dim==2:
                         line=line[:,0]
                     for k, graph in enumerate(curr_graphs):
-                        axs[i].plot(line, graph, color=COLORS[model.name], label=name if k==0 else None)
+                        axs[i].plot(line, graph, color=COLORS[name], label=name if k==0 else None)
             if self.disc.dim==1:
                 axs[i].plot(self.disc.pts_line, self.sol.u(self.disc.pts_line), 'k--', label='exact')
             if self.disc.dim==2:

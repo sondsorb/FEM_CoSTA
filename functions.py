@@ -54,11 +54,8 @@ class Solution:
         self.alpha = alpha
 
     def u(self, x, t=None):
-        try:
-            if t==None:
-                t = self.T
-        except:
-            pass
+        if t==None:
+            t = self.T
         return self.u_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
 
     def f(self, x, t=None):
@@ -70,11 +67,8 @@ class Solution:
         return result
 
     def w(self, x, t=None):
-        try:
-            if t==None:
-                t = self.T
-        except:
-            pass
+        if t==None:
+            t = self.T
         return self.w_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
 
 def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):

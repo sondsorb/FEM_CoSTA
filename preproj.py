@@ -5,6 +5,7 @@ import solvers
 import functions
 from matplotlib import pyplot as plt
 import sys
+import utils
 
 mode = 'bugfix'
 if len(sys.argv)>1:
@@ -94,7 +95,7 @@ for sol_index in [4,1,2,3]:
     model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, NNkwargs=NNkwargs)
     extra_tag = '_sigm' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol_index}_p{p}{extra_tag}.pdf'
-    model_folder = f'../preproject/saved_models/{mode}{extra_tag}/'#_explosions/'
+    model_folder = f'../preproject/saved_models/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/'#_explosions/'
     #figname = None
     model.plot=False
     model.train(figname=figname, model_folder = model_folder)
@@ -102,12 +103,24 @@ for sol_index in [4,1,2,3]:
     #model.load_weights(model_folder)
 
     #model.plot=True
+
+    # Interpolation
+    result_folder = f'../preproject/saved_results/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/interpol/'
+    utils.makefolder(result_folder)
+    _ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}{extra_tag}.pdf'
-    #figname = None
-    _ = model.test(interpol = True, figname=figname)#, ignore_models=['pgDNN'])
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
+    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/sol{sol_index}_p{p}_nonstat{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
+
+    # Extrapolation
+    result_folder = f'../preproject/saved_results/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/extrapol/'
+    utils.makefolder(result_folder)
+    _ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}{extra_tag}.pdf'
-    #figname = None
-    _ = model.test(interpol = False, figname=figname)#, ignore_models=['pgDNN'])
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
+    figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/extrapol/sol{sol_index}_p{p}_nonstat{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
 
     #extra_tag = '_xxpol'
     #model.alpha_test_extrapol = [-0.9,4]

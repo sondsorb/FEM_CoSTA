@@ -5,6 +5,7 @@ import solvers
 import functions
 from matplotlib import pyplot as plt
 import sys
+import utils
 
 mode = 'bugfix'
 if len(sys.argv)>1:
@@ -103,19 +104,26 @@ for sol_index in [1,0]:
     extra_tag = '' # for different names when testing specific stuff
     figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/interpol/loss_sol{sol_index}{extra_tag}.pdf'
     #figname = None
-    model.plot=True
+    model.plot=False
+    model_folder = f'../master/saved_models/1d_heat/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/'
     #model.train(figname=figname, model_folder = model_folder)
-    model.train(figname=figname)
-    #model.load_weights(model_folder)
+    #model.train(figname=figname)
+    model.load_weights(model_folder)
 
-    #model.plot=True
+    # Interpolation
+    result_folder = f'../master/saved_results/1d_heat/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/interpol/'
+    utils.makefolder(result_folder)
+    _ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/interpol/sol{sol_index}{extra_tag}.pdf'
-    #figname = None
-    _ = model.test(interpol = True, figname=figname)#, ignore_models=['pgDNN'])
-    figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}{extra_tag}.pdf'
-    #figname = None
-    _ = model.test(interpol = False, figname=figname)#, ignore_models=['pgDNN'])
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
+    figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/interpol/sol{sol_index}_nonstat{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
 
-    #extra_tag = '_xxpol'
-    #model.alpha_test_extrapol = [-0.9,4]
-    #_ = model.test(interpol = False, figname=figname, ignore_models=['pgDNN'])
+    # Extrapolation
+    result_folder = f'../master/saved_results/1d_heat/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/extrapol/'
+    utils.makefolder(result_folder)
+    _ = model.test(interpol = False, result_folder=result_folder)
+    figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
+    figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}_nonstat{extra_tag}.pdf'
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)

@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib import pyplot as plt, cm
 import sys
 import sympy as sp
+import utils
 
 
 
@@ -116,7 +117,21 @@ model.train(figname=figname)
 #model.load_weights(model_folder)
 
 model.plot=True
+
+# Interpolation
+result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/interpol/'
+utils.makefolder(result_folder)
+_ = model.test(interpol = True, result_folder=result_folder)
 figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}{extra_tag}.pdf'
-_ = model.test(interpol = True, figname=figname)
+model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
+figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}_nonstat{extra_tag}.pdf'
+model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
+
+# Extrapolation
+result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/extrapol/'
+utils.makefolder(result_folder)
+_ = model.test(interpol = False, result_folder=result_folder)
 figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}{extra_tag}.pdf'
-_ = model.test(interpol = False, figname=figname)
+model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
+figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}_nonstat{extra_tag}.pdf'
+model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
