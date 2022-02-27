@@ -178,3 +178,47 @@ new score 0.012984355830338688
 Changing bn_depth from 3 by adding -1
 new score 0.011534396033841966
 Changing bn_depth from 2 by adding -1
+
+
+
+2022-02-27 13:58:28.186543
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-27 13:58:51.813999
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-27 14:00:09.079485
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-27 14:02:23.197653
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-27 14:02:48.784732
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 20, 'bn_depth': 4, 'l1_penalty': 0.01, 'alpha': 0.01}
+Score to beat: 0.03159236758391101
+Changing alpha from 0.01 by adding 1
+
+
+
+2022-02-27 14:03:46.021568
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 20, 'bn_depth': 4, 'l1_penalty': 0.01, 'alpha': 0.01}
+Score to beat: 0.057319318830266114
+Changing alpha from 0.01 by adding -0.005
+new score 0.053976245767699105
+Changing alpha from 0.005 by adding -0.0025

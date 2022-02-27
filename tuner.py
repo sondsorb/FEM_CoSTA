@@ -30,6 +30,7 @@ if debug_mode:
     elif modelname=='CoSTA_pgDNN':
         nnkwargs = pgDNNkwargs
         nnkwargs['l1_penalty']=0.01
+        nnkwargs['alpha']=0.01
     else:
         print('implement this first')
         quit()
@@ -46,7 +47,8 @@ else:
         #nnkwargs['noise_level'= 1e-3
     elif modelname=='CoSTA_pgDNN':
         nnkwargs = pgDNNkwargs
-        nnkwargs['l1_penalty']=0.01
+        nnkwargs['l1_penalty']=0.00004
+        nnkwargs['alpha']=0.01
     else:
         print('implement this first')
         quit()
@@ -57,6 +59,7 @@ else:
 nnkwargs.pop('patience', 0)
 nnkwargs.pop('epochs', 0)
 nnkwargs.pop('min_epochs', 0)
+nnkwargs.pop('lr', 0)
 
 Np = Ne+1
 pts = np.linspace(0,1,Np)
@@ -79,9 +82,13 @@ disc = FEM.Disc(
         static=False,
         )
 
+
+
 def get_models(trainkwargs, nnkwargs):
     models=[]
     kwargs = {**trainkwargs, **nnkwargs}
+    alpha=kwargs.pop('alpha')
+    kwargs['activation'] = lambda x: methods.lrelu(x=x, alpha=alpha)
     for i in range(NoM):
         #if modelname == 'DNN':
         #    models.append(solvers.DNN_solver(T=T, pts=pts, time_steps=time_steps, Np=Np, **DNNkwargs))
@@ -137,6 +144,7 @@ def get_score(nnkwargs, i, tag=''):
 parameters = [key for key in nnkwargs]
 #parameters = ['dropout_level', 'noise_level']
 #parameters = ['l1_penalty']
+parameters = ['alpha']
 startscore = None
 
 # tune:
@@ -163,7 +171,7 @@ for tuning_iteration in range(500):
                     change = sign * 0.05
                     if change+nnkwargs[parameter] < 0:
                         break
-                elif parameter in ['noise_level', 'l1_penalty']:
+                elif parameter in ['noise_level', 'l1_penalty', 'alpha']:
                     change = nnkwargs[parameter] if sign>0 else -nnkwargs[parameter]/2
                 else:
                     change = sign * max(1, int(rate*nnkwargs[parameter]))

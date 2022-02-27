@@ -11,8 +11,8 @@ from utils import merge_first_dims
 
 
 
-def lrelu(x):
-    return tf.keras.activations.relu(x, alpha=0.01)#, threshold=0,  max_value=0.01)
+def lrelu(x, alpha=0.01):
+    return tf.keras.activations.relu(x, alpha=alpha)#, threshold=0,  max_value=0.01)
     #return tf.keras.activations.relu(x, alpha=0.3)#, threshold=0,  max_value=0.01)
 #lrelu=keras.activations.sigmoid
 
