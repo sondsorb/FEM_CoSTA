@@ -73,12 +73,12 @@ def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers,
         model.add(layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape, return_sequences=False))
     if lstm_layers  > 1:
         model.add(layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape, return_sequences=True))
-        for i in range(lstm_layers -2):
+        for i in range(lstm_layers -1):
             model.add(layers.LSTM(lstm_depth, activation=lrelu, return_sequences=True))
         model.add(layers.LSTM(lstm_depth, activation=lrelu, return_sequences=False))
     model.add(layers.Dropout(dropout_level))
 
-    for i in range(dense_layers-1):
+    for i in range(dense_layers):
         model.add(layers.Dense(dense_depth, activation=lrelu))
     model.add(layers.Dense(output_length))
 
@@ -86,11 +86,17 @@ def get_LSTM(input_shape, output_length, dense_layers, dense_depth, lstm_layers,
     model.compile(loss='mse', optimizer=opt)
     return model
 
-def get_pgLSTM(input_shape_1, input_shape_2, output_length, dense_layers, dense_depth, lstm_layers, lstm_depth, lr, dropout_level=0):
+def get_pgLSTM(input_shape_1, input_shape_2, output_length, dense_layers, dense_depth, bn_depth, lstm_layers, lstm_depth, lr, dropout_level=0):
     inputs_1 = keras.Input(shape=input_shape_1)
     x = inputs_1
-    x = layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape_1, return_sequences=True)(x)
-    x = layers.LSTM(lstm_depth, activation=lrelu, return_sequences=False)(x)
+    # Add correct amount of LSTM layers
+    if lstm_layers == 1:
+        model.add(layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape_1, return_sequences=False))
+    if lstm_layers  > 1:
+        for i in range(lstm_layers-1):
+            x = layers.LSTM(lstm_depth, activation=lrelu, input_shape=input_shape_1, return_sequences=True)(x)
+        x = layers.LSTM(lstm_depth, activation=lrelu, return_sequences=False)(x)
+    x = layers.Dense(bn_depth, activation=lrelu)(x)
     model_1 = keras.Model(inputs_1, x)
 
     inputs_2 = keras.Input(shape=input_shape_2)
@@ -99,8 +105,8 @@ def get_pgLSTM(input_shape_1, input_shape_2, output_length, dense_layers, dense_
 
     combined_input = layers.concatenate([model_1.output, model_2.output])
     x = combined_input 
-    for current_depth in [dense_depth,dense_depth]:
-        x = layers.Dense(current_depth, activation=lrelu)(x)
+    for i in range(dense_layers):
+        x = layers.Dense(dense_depth, activation=lrelu)(x)
     x = layers.Dense(output_length)(x)
 
 

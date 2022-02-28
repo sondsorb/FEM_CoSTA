@@ -641,3 +641,161 @@ Score to beat: 0.01826808382942581
 Changing n_layers_1 from 1 by adding 1
 new score 0.064749003772841
 Changing bn_depth from 7 by adding -1
+
+
+
+2022-02-27 14:05:31.846482
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.01}
+Score to beat: 0.01581163033090991
+Changing alpha from 0.01 by adding 0.01
+new score 0.010323315410773215
+Changing alpha from 0.02 by adding 0.02
+new score 0.00837054996390205
+Changing alpha from 0.04 by adding 0.04
+new score 0.008120830716858922
+Changing alpha from 0.08 by adding 0.08
+new score 0.00781532420298027
+Changing alpha from 0.16 by adding 0.16
+new score 0.005992276780457306
+Changing alpha from 0.32 by adding 0.32
+new score 0.011824527975427783
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.32}
+Score to beat: 0.016644693448228377
+Changing alpha from 0.32 by adding 0.32
+new score 0.01192471815306061
+Changing alpha from 0.64 by adding 0.64
+new score 0.016673400533159338
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.64}
+Score to beat: 0.012617262236584024
+Changing alpha from 0.64 by adding 0.64
+new score 0.021532389095967705
+Changing alpha from 0.64 by adding -0.32
+new score 0.006233050822286795
+Changing alpha from 0.32 by adding -0.16
+new score 0.019918331465645863
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.32}
+Score to beat: 0.009732323308236515
+Changing alpha from 0.32 by adding -0.16
+new score 0.012269570123978652
+Changing alpha from 0.32 by adding 0.32
+new score 0.010470005832995363
+
+NO CHANGE!
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.32}
+Score to beat: 0.007010485354975159
+Changing alpha from 0.32 by adding -0.16
+new score 0.0172996874542883
+Changing alpha from 0.32 by adding 0.32
+new score 0.015916461592539045
+
+NO CHANGE!
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.32}
+
+
+
+2022-02-27 23:26:41.256876
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-27 23:27:09.752705
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+
+
+
+2022-02-27 23:27:55.001581
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.1}
+Score to beat: 0.00783289296023514
+Changing alpha from 0.1 by adding 0.1
+new score 0.009911652559956553
+Changing alpha from 0.1 by adding -0.05
+new score 0.008035774729961542
+Changing l1_penalty from 4e-05 by adding -2e-05
+new score 0.008815795303413166
+Changing l1_penalty from 4e-05 by adding 4e-05
+new score 0.019840065234592953
+
+NO CHANGE!
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 4e-05, 'alpha': 0.1}
+Score to beat: 0.017249000120521173
+Changing l1_penalty from 4e-05 by adding -2e-05
+new score 0.008963014492234404
+Changing l1_penalty from 2e-05 by adding -1e-05
+new score 0.004420862844145248
+Changing l1_penalty from 1e-05 by adding -5e-06
+new score 0.007176581542277597
+Changing alpha from 0.1 by adding -0.05
+new score 0.0043741184097345065
+Changing alpha from 0.05 by adding -0.025
+new score 0.0046062574205909
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 1e-05, 'alpha': 0.05}
+Score to beat: 0.00529938630839742
+Changing l1_penalty from 1e-05 by adding 1e-05
+new score 0.007484628741805807
+Changing l1_penalty from 1e-05 by adding -5e-06
+new score 0.003335008881611216
+Changing l1_penalty from 5e-06 by adding -2.5e-06
+new score 0.0024501468345906816
+Changing l1_penalty from 2.5e-06 by adding -1.25e-06
+new score 0.0030978318702007067
+Changing alpha from 0.05 by adding 0.05
+new score 0.006093283582643009
+Changing alpha from 0.05 by adding -0.025
+new score 0.005966613999580237
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 2.5e-06, 'alpha': 0.05}
+Score to beat: 0.00867147222058459
+Changing alpha from 0.05 by adding 0.05
+new score 0.006344494836480429
+Changing alpha from 0.1 by adding 0.1
+new score 0.005672190482496764
+Changing alpha from 0.2 by adding 0.2
+new score 0.00722552482870279
+Changing l1_penalty from 2.5e-06 by adding -1.25e-06
+new score 0.004265997077862641
+Changing l1_penalty from 1.25e-06 by adding -6.25e-07
+new score 0.007968567068751816
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 1.25e-06, 'alpha': 0.2}
+Score to beat: 0.004902514779304652
+Changing l1_penalty from 1.25e-06 by adding -6.25e-07
+new score 0.009870724096194682
+Changing l1_penalty from 1.25e-06 by adding 1.25e-06
+new score 0.009344756965296273
+Changing alpha from 0.2 by adding 0.2
+new score 0.0033770337618458557
+Changing alpha from 0.4 by adding 0.4
+new score 0.005104554889587195
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 1.25e-06, 'alpha': 0.4}
+Score to beat: 0.003835612716909045
+Changing l1_penalty from 1.25e-06 by adding 1.25e-06
+new score 0.007196412840364362
+Changing l1_penalty from 1.25e-06 by adding -6.25e-07
+new score 0.01576843921348288
+Changing alpha from 0.4 by adding 0.4
+new score 0.02115363144434655
+Changing alpha from 0.4 by adding -0.2
+new score 0.0064120921209963044
+
+NO CHANGE!
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 1.25e-06, 'alpha': 0.4}
+Score to beat: 0.004238230013637048
+Changing l1_penalty from 1.25e-06 by adding -6.25e-07
+new score 0.0043422205676173515
+Changing l1_penalty from 1.25e-06 by adding 1.25e-06
+new score 0.009236866105352098
+Changing alpha from 0.4 by adding -0.2
+new score 0.0035799703158596275
+Changing alpha from 0.2 by adding -0.1
+new score 0.006063571847993991
+Starting new tuning iteration. Configs now: {'n_layers_1': 1, 'n_layers_2': 2, 'depth': 80, 'bn_depth': 8, 'l1_penalty': 1.25e-06, 'alpha': 0.2}
+Score to beat: 0.004482507356669339
+Changing alpha from 0.2 by adding 0.2
+new score 0.00419710557905371
+Changing alpha from 0.4 by adding 0.4
+new score 0.00742053102518778
+Changing l1_penalty from 1.25e-06 by adding 1.25e-06

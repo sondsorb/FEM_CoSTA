@@ -222,3 +222,9 @@ Score to beat: 0.057319318830266114
 Changing alpha from 0.01 by adding -0.005
 new score 0.053976245767699105
 Changing alpha from 0.005 by adding -0.0025
+
+
+
+2022-03-01 00:15:54.500531
+Using training parameters: time_steps=20, {'lr': 0.005, 'patience': [10, 10], 'epochs': [100, 100], 'min_epochs': [50, 50]}
+

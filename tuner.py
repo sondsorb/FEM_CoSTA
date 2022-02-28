@@ -8,10 +8,11 @@ import datetime
 import numpy as np
 
 # Configs for tuning:
-debug_mode = False
+debug_mode = True#False
 #modelname = 'LSTM'
 #modelname = 'CoSTA_LSTM'
-modelname = 'CoSTA_pgDNN'
+#modelname = 'CoSTA_pgDNN'
+modelname = 'CoSTA_pgLSTM'
 T = 5
 rate = 0.25 # Rate to change parameters
 p=1
@@ -31,6 +32,8 @@ if debug_mode:
         nnkwargs = pgDNNkwargs
         nnkwargs['l1_penalty']=0.01
         nnkwargs['alpha']=0.01
+    elif modelname=='CoSTA_pgLSTM':
+        nnkwargs = pgLSTMkwargs
     else:
         print('implement this first')
         quit()
@@ -48,7 +51,9 @@ else:
     elif modelname=='CoSTA_pgDNN':
         nnkwargs = pgDNNkwargs
         nnkwargs['l1_penalty']=0.00004
-        nnkwargs['alpha']=0.01
+        nnkwargs['alpha']=0.1
+    elif modelname=='CoSTA_pgLSTM':
+        nnkwargs = pgLSTMkwargs
     else:
         print('implement this first')
         quit()
@@ -87,8 +92,9 @@ disc = FEM.Disc(
 def get_models(trainkwargs, nnkwargs):
     models=[]
     kwargs = {**trainkwargs, **nnkwargs}
-    alpha=kwargs.pop('alpha')
-    kwargs['activation'] = lambda x: methods.lrelu(x=x, alpha=alpha)
+    if modelname=='CoSTA_pgDNN':
+        alpha=kwargs.pop('alpha')
+        kwargs['activation'] = lambda x: methods.lrelu(x=x, alpha=alpha)
     for i in range(NoM):
         #if modelname == 'DNN':
         #    models.append(solvers.DNN_solver(T=T, pts=pts, time_steps=time_steps, Np=Np, **DNNkwargs))
@@ -100,6 +106,8 @@ def get_models(trainkwargs, nnkwargs):
             models.append(methods.CoSTA_LSTM_solver(disc, **kwargs))
         elif modelname == 'CoSTA_pgDNN':
             models.append(methods.CoSTA_pgDNN_solver(disc, **kwargs))
+        elif modelname == 'CoSTA_pgLSTM':
+            models.append(methods.CoSTA_pgLSTM_solver(disc, **kwargs))
         else:
             print('implement this first')
             quit()
@@ -143,8 +151,7 @@ def get_score(nnkwargs, i, tag=''):
 
 parameters = [key for key in nnkwargs]
 #parameters = ['dropout_level', 'noise_level']
-#parameters = ['l1_penalty']
-parameters = ['alpha']
+#parameters = ['l1_penalty', 'alpha']
 startscore = None
 
 # tune:

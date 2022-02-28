@@ -7,7 +7,7 @@ def set_args(mode, dim=1):
         DNNkwargs = {'n_layers_1':1, 'n_layers_2':2,'depth':20, 'bn_depth':4,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}
         pgDNNkwargs = {'n_layers_1':1,'n_layers_2':2,'depth':20,'bn_depth':4,'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50]}#, 'l1_penalty':0.01}
         LSTMkwargs = {'lstm_layers':2, 'lstm_depth':20, 'dense_layers':1, 'dense_depth':20, 'lr':5e-3, 'patience':[10,10], 'epochs':[100,100], 'min_epochs':[50,50]}
-        pgLSTMkwargs = {'lstm_layers':2, 'lstm_depth':8, 'dense_layers':1, 'dense_depth':80, 'lr':5e-3, 'patience':[10,10], 'input_period':10}
+        pgLSTMkwargs = {'lstm_layers':2, 'lstm_depth':8, 'dense_layers':1, 'bn_depth':10, 'dense_depth':80, 'lr':5e-3, 'patience':[10,10], 'input_period':10}
         NoM = 2
         time_delta = 5
     elif mode == 'quick_test':
@@ -16,9 +16,9 @@ def set_args(mode, dim=1):
         DNNkwargs = {'n_layers_1':1, 'n_layers_2':2,'depth':80, 'bn_depth':8,'lr':8e-5,'patience':[20,20]}
         pgDNNkwargs = {'n_layers_1':1,'n_layers_2':2,'depth':80,'bn_depth':8,'lr':8e-5,'patience':[20,20]}
         #LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20]}
-        LSTMkwargs = {'lstm_layers':3, 'lstm_depth':40, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20]}
+        LSTMkwargs = {'lstm_layers':3, 'lstm_depth':40, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
         #pgLSTMkwargs = {'lstm_layers':4, 'lstm_depth':16, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
-        pgLSTMkwargs = {'lstm_layers':2, 'lstm_depth':16, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
+        pgLSTMkwargs = {'lstm_layers':2, 'lstm_depth':16, 'bn_depth':10, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
         NoM=3
         time_delta = 0.3 # max 30 steps back
     elif mode == 'full_test':
