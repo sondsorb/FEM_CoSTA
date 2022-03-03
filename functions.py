@@ -40,6 +40,23 @@ SBMFACT_TUNING = [
             ),
     ]
 
+# varying conductivity k=k(u) #TODO verify these!!
+k_0 = 1
+var_k = [
+            (
+                lambda x,t,alpha,time_delta: x**2 - alpha*6*x**2*t**2,
+                lambda x,t,alpha,time_delta: t*x**2
+            ),
+            (
+                lambda x,t,alpha,time_delta: alpha*np.cos(x+alpha*t) - 2*np.sin(x+alpha*t)*np.cos(x+alpha*t)**2 + np.sin(x+alpha)**3,
+                lambda x,t,alpha,time_delta: np.sin(x+alpha*t)
+            ),
+            (
+                lambda x,t,alpha,time_delta: x**2 - (alpha/30)*6*x**2*t**2 - 2*k_0*t,
+                lambda x,t,alpha,time_delta: t*x**2
+            ),
+    ]
+
 class Solution:
     def __init__(self, T, f_raw, u_raw, zero_source=True, name='?', time_delta=0, w_raw=None):
         self.T = T # final time (default in u)

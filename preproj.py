@@ -22,6 +22,7 @@ else:
     print('syntax e.g.: python testing.py 2')
 
 Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = mode, dim=1)
+pgLRkwargs= {'lr':5e-3,'patience':[10,20], 'epochs':[100,100], 'min_epochs':[50,50], 'bn_depth':pgDNNkwargs['bn_depth']}#, 'l1_penalty':0.01}
 
 if len(sys.argv)>2:
     if sys.argv[2]=='f':
@@ -43,27 +44,32 @@ print(f'Using p={p}')
 
 modelnames = {
         'DNN' : NoM,
-        #'pgDNN' : NoM,
+        'pgDNN' : NoM,
+        'pgLR' : NoM,
         #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
         'CoSTA_pgDNN' : NoM,
+        'CoSTA_pgLR' : NoM,
         #'CoSTA_LSTM' : NoM,
         }
 NNkwargs = {
         'DNN':DNNkwargs, 
         'CoSTA_DNN':DNNkwargs,
-        #'pgDNN' : pgDNNkwargs,
+        'pgDNN' : pgDNNkwargs,
+        'pgLR' : pgLRkwargs,
         'CoSTA_pgDNN':pgDNNkwargs,
-        #'LSTM':LSTMkwargs, 
-        #'CoSTA_LSTM':LSTMkwargs, 
+        'CoSTA_pgLR':pgLRkwargs,
+        'LSTM':LSTMkwargs, 
+        'CoSTA_LSTM':LSTMkwargs, 
         }
 
 for sol_index in [4,1,2,3]:
     print(f'sol_index: {sol_index}\n')
     f,u = functions.SBMFACT[sol_index]
+    extra_tag = '_LR1' # for different names when testing specific stuff
+    pgDNNkwargs['activation'] = None
     sol = functions.Solution(T=5, f_raw=f, u_raw=u, zero_source=not source, name=f'{sol_index}', time_delta=time_delta)
     model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, NNkwargs=NNkwargs)
-    extra_tag = '_sigm' # for different names when testing specific stuff
     figname = f'../preproject/1d_heat_figures/{mode}/{"known_f" if source else "unknown_f"}/interpol/loss_sol{sol_index}_p{p}{extra_tag}.pdf'
     model_folder = f'../preproject/saved_models/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/'#_explosions/'
     #figname = None

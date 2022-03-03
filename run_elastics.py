@@ -24,6 +24,7 @@ else:
     print('syntax e.g.: python testing.py 2')
 
 Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = mode, dim=2)
+#time_steps = 100
 
 if len(sys.argv)>2:
     if sys.argv[2]=='bp':
@@ -49,11 +50,13 @@ p=1
 
 modelnames = {
         'DNN' : NoM,
-        'pgDNN' : NoM,
+        #'pgDNN' : NoM,
         #'LSTM' : NoM,
+        #'pgLSTM' : NoM,
         'CoSTA_DNN' : NoM,
-        'CoSTA_pgDNN' : NoM,
+        #'CoSTA_pgDNN' : NoM,
         #'CoSTA_LSTM' : NoM,
+        #'CoSTA_pgLSTM' : NoM,
         }
 NNkwargs = {
         'DNN':DNNkwargs,
@@ -61,7 +64,9 @@ NNkwargs = {
         'pgDNN' : pgDNNkwargs,
         'CoSTA_pgDNN':pgDNNkwargs,
         'LSTM':LSTMkwargs,
+        'pgLSTM':pgLSTMkwargs,
         'CoSTA_LSTM':LSTMkwargs,
+        'CoSTA_pgLSTM':pgLSTMkwargs,
         }
 
 #assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
@@ -85,7 +90,7 @@ for i in [0,1,2]:
     model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
     
-    #model.plot=True
+    model.plot=True
 
     # Interpolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'

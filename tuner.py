@@ -8,11 +8,11 @@ import datetime
 import numpy as np
 
 # Configs for tuning:
-debug_mode = True#False
+debug_mode = False
 #modelname = 'LSTM'
-#modelname = 'CoSTA_LSTM'
+modelname = 'CoSTA_LSTM'
 #modelname = 'CoSTA_pgDNN'
-modelname = 'CoSTA_pgLSTM'
+#modelname = 'CoSTA_pgLSTM'
 T = 5
 rate = 0.25 # Rate to change parameters
 p=1

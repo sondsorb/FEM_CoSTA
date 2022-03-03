@@ -19,7 +19,7 @@ def set_args(mode, dim=1):
         LSTMkwargs = {'lstm_layers':3, 'lstm_depth':40, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
         #pgLSTMkwargs = {'lstm_layers':4, 'lstm_depth':16, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
         pgLSTMkwargs = {'lstm_layers':2, 'lstm_depth':16, 'bn_depth':10, 'dense_layers':2, 'dense_depth':80, 'lr':8e-5, 'patience':[20,20], 'input_period':10}
-        NoM=3
+        NoM=5
         time_delta = 0.3 # max 30 steps back
     elif mode == 'full_test':
         Ne = 20 if dim==1 else 15

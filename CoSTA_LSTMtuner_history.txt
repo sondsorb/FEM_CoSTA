@@ -251,3 +251,46 @@ Changing dropout_level from 0.2 by adding -0.05
 new score 5.900788035366682e+28
 Changing dropout_level from 0.2 by adding 0.05
 new score 0.12364423980106984
+
+
+
+2022-03-01 00:22:37.663723
+Using training parameters: time_steps=500, {'lr': 8e-05, 'patience': [20, 20], 'epochs': [2000, 2000], 'min_epochs': [50, 50]}
+
+Starting new tuning iteration. Configs now: {'lstm_layers': 3, 'lstm_depth': 40, 'dense_layers': 2, 'dense_depth': 80, 'input_period': 10}
+Score to beat: 0.013329842319379016
+Changing lstm_layers from 3 by adding 1
+new score 0.0903569685760779
+Changing lstm_layers from 3 by adding -1
+new score 3.1944029294267304
+Changing lstm_depth from 40 by adding -10
+new score 0.12660072494557711
+Changing lstm_depth from 40 by adding 10
+new score 0.06831905543488874
+Changing dense_depth from 80 by adding 20
+new score 0.035443838254938714
+Changing dense_depth from 80 by adding -20
+new score 2.4871319100758653e+27
+Changing dense_layers from 2 by adding 1
+new score 0.05085550015419034
+Changing dense_layers from 2 by adding -1
+new score 0.13294052139472232
+Changing input_period from 10 by adding 2
+new score 35315.79157923648
+Changing input_period from 10 by adding -2
+new score 0.06493006758940303
+
+NO CHANGE!
+Starting new tuning iteration. Configs now: {'lstm_layers': 3, 'lstm_depth': 40, 'dense_layers': 2, 'dense_depth': 80, 'input_period': 10}
+Score to beat: 0.055639985185166746
+Changing lstm_layers from 3 by adding 1
+new score 0.06689772317843648
+Changing lstm_layers from 3 by adding -1
+new score 7.375186147161576e+19
+Changing dense_layers from 2 by adding -1
+new score 0.058709567519555104
+Changing dense_layers from 2 by adding 1
+new score 0.13793431273301646
+Changing dense_depth from 80 by adding -20
+new score 0.03675804853699734
+Changing dense_depth from 60 by adding -15

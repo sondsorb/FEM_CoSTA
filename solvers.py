@@ -12,7 +12,7 @@ from utils import merge_first_dims
 import methods
 
 COLORS = {
-        # (blac)k is reserved for exact solution
+        'exact':'k', # blacK
         'FEM':(1,0,0),# red
         'DNN':(0.9,0.6,0), #gold
         'pgDNN':(1,1,0), # yellow
@@ -20,8 +20,10 @@ COLORS = {
         'CoSTA_pgDNN':(0,0.5,0), # Green
         'LSTM':(.86,0,1), # purple-pink
         'pgLSTM':(0.6,0.2,0),
+        'pgLR':(0.6,0.2,0), # WARNING: SAME AS ABOVE
         'CoSTA_LSTM':'c',
         'CoSTA_pgLSTM':(0.67,1,0),
+        'CoSTA_pgLR':(0.67,1,0), # WARNING: SAME AS ABOVE
         }
 
 
@@ -66,6 +68,8 @@ class Solvers:
                 for i in range(modelnames[modelname]):
                     if modelname == 'DNN':
                         self.models.append(methods.DNN_solver(disc=self.disc, **(NNkwargs[modelname])))
+                    elif modelname == 'pgLR':
+                        self.models.append(methods.pgLR_solver(disc=self.disc, **(NNkwargs[modelname])))
                     elif modelname == 'pgDNN':
                         self.models.append(methods.pgDNN_solver(disc=self.disc, **(NNkwargs[modelname])))
                     elif modelname == 'LSTM':
@@ -74,6 +78,8 @@ class Solvers:
                         self.models.append(methods.pgLSTM_solver(disc=self.disc, **(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_DNN':
                         self.models.append(methods.CoSTA_DNN_solver(disc=self.disc,**(NNkwargs[modelname])))
+                    elif modelname == 'CoSTA_pgLR':
+                        self.models.append(methods.CoSTA_pgLR_solver(disc=self.disc,**(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_pgDNN':
                         self.models.append(methods.CoSTA_pgDNN_solver(disc=self.disc,**(NNkwargs[modelname])))
                     elif modelname == 'CoSTA_LSTM':
@@ -345,8 +351,8 @@ class Solvers:
         fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
 
         graphs1d={}
+        graphs2d={}
         if self.disc.dim==2:
-            graphs2d={}
             N = len(self.disc.pts_line)-1
             X2d = np.array([np.linspace(-1,1,N+1)]*(N+1)).T
             Y2d = np.array([np.linspace(-1,1,N+1)]*(N+1))
@@ -356,20 +362,10 @@ class Solvers:
             self.sol.set_alpha(alpha)
 
             fem_model = self.disc.make_model(self.sol.f, self.sol.u, w_ex=self.sol.w)
-            fem_model.u_fem = np.array(final_solutions[f'{alpha}']['FEM'][0])
             graphs1d[alpha]={}
+            graphs2d[alpha] = {}
             #if self.disc.dim==1:
                 #axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
-            graphs1d[alpha]['exact'] = self.sol.u(self.disc.pts_line)
-            graphs1d[alpha]['FEM'] = fem_model.solution(self.disc.pts_line)
-            if self.disc.dim==2:
-                if self.disc.equation == 'elasticity':
-                    axs[i].plot(self.disc.pts_line[:,0], fem_model.solution(self.disc.pts_line)[:,0], color=COLORS['FEM'], label='fem')
-                    graphs1d[alpha]['exact'] = self.sol.u(self.disc.pts_line)[:,0] # only first component is plotted in graph1d for elasticity
-                    graphs1d[alpha]['FEM'] = fem_model.solution(self.disc.pts_line)[:,0]
-                graphs2d[alpha] = {}
-                graphs2d[alpha]['exact'] = self.sol.u(pts2d)
-                graphs2d[alpha]['FEM'] = fem_model.solution(pts2d)
             prev_name = ''
             j=0
             for model in self.models:
@@ -390,6 +386,15 @@ class Solvers:
                     else:
                         graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line))
                     j+=1
+            fem_model.u_fem = np.array(final_solutions[f'{alpha}']['FEM'][0])
+            graphs1d[alpha]['FEM'] = [fem_model.solution(self.disc.pts_line)]
+            graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)]
+            if self.disc.dim==2:
+                if self.disc.equation == 'elasticity':
+                    graphs1d[alpha]['FEM'] = [fem_model.solution(self.disc.pts_line)[:,0]]
+                    graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)[:,0]] # only first component is plotted in graph1d for elasticity
+                graphs2d[alpha]['FEM'] = fem_model.solution(pts2d)
+                graphs2d[alpha]['exact'] = self.sol.u(pts2d)
 
         # plot 1d final solutions
         for i, alpha in enumerate(alphas):
@@ -405,19 +410,12 @@ class Solvers:
                     if self.disc.dim==2:
                         axs[i].plot(self.disc.pts_line[:,0], mean, color=COLORS[name])
                         axs[i].fill_between(self.disc.pts_line[:,0], mean+std, mean-std, color=COLORS[name], alpha = 0.4, label = name)
-                elif not name in ['FEM', 'exact']: # not statplot
+                else:
                     line=self.disc.pts_line
                     if self.disc.dim==2:
                         line=line[:,0]
                     for k, graph in enumerate(curr_graphs):
-                        axs[i].plot(line, graph, color=COLORS[name], label=name if k==0 else None)
-            if self.disc.dim==1:
-                axs[i].plot(self.disc.pts_line, self.sol.u(self.disc.pts_line), 'k--', label='exact')
-            if self.disc.dim==2:
-                if self.disc.equation == 'elasticity':
-                    axs[i].plot(self.disc.pts_line[:,0], self.sol.u(self.disc.pts_line)[:,0], 'k--', label='exact')
-                else:
-                    axs[i].plot(self.disc.pts_line[:,0], self.sol.u(self.disc.pts_line), 'k--', label='exact')
+                        axs[i].plot(line, graph, color=COLORS[name], label=name if k==0 else None, linestyle = '--' if name=='exact' else '-')
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
