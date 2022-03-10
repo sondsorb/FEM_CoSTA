@@ -262,6 +262,7 @@ class Solvers:
             self, 
             interpol = True, 
             result_folder = None,
+            ###intermediate_plot_interval = None
             ):
         '''
         interpol - (bool) use interpolating or extrapolating alpha set
@@ -272,6 +273,7 @@ class Solvers:
         l2_devs={}
         L2_scores={}
         l2_scores={}
+        ###intermediate_solutions={}
         final_solutions={}
 
         for i, alpha in enumerate(alphas):
@@ -281,6 +283,9 @@ class Solvers:
             def relative_l2_callback(t, u_approx):
                 inner_u = u_approx[self.disc.inner_ids2] if len(u_approx)==self.disc.Nv else u_approx[0,:]
                 self.l2_development.append(np.sqrt(np.mean((inner_u-self.disc.format_u(self.sol.u(self.disc.pts[self.disc.inner_ids1],t)))**2)) / np.sqrt(np.mean(self.disc.format_u(self.sol.u(self.disc.pts[self.disc.inner_ids1],t)**2))))
+                ###if abs(t-self.disk.k*intermediate_plot_interval*(len(intermediate_solutions)+1)) < 1e-10:
+                    ###intermediate_solutions[intermediate_plot_interval*(len(intermediate_solutions)+1)]['temp'] = u
+
 
             # Solve with FEM
             self.l2_development = []
@@ -331,7 +336,7 @@ class Solvers:
             ):
         '''
         interpol - (bool) use interpolating or extrapolating alpha set
-        figname - (string or None) filename to save figure to. Note saved if None.
+        figname - (string or None) filename to save figure to. Not saved if None. .pdf if added to the figname before saving, and should not be included in figname.
         statplot - (bool or int) if plots should be of mean and variance (instead of every solution). If int, then statplot is set to len(models)>statplot
         ignore_models - (list of str) names of models not to include in plots. FEM always included.
         '''
@@ -364,8 +369,6 @@ class Solvers:
             fem_model = self.disc.make_model(self.sol.f, self.sol.u, w_ex=self.sol.w)
             graphs1d[alpha]={}
             graphs2d[alpha] = {}
-            #if self.disc.dim==1:
-                #axs[i].plot(self.disc.pts_line, fem_model.solution(self.disc.pts_line), color=COLORS['FEM'], label='fem')
             prev_name = ''
             j=0
             for model in self.models:
@@ -421,7 +424,7 @@ class Solvers:
 
         plt.tight_layout()
         if figname != None:
-            plt.savefig(figname)
+            plt.savefig(figname+'.pdf')
         if self.plot:# and self.disc.dim==1:
             plt.show()
         else:

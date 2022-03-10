@@ -44,6 +44,26 @@ def test_2d_elast():
     #    print(model.relative_L2())
     #model.plot_solution()
 
+def test_manufacture_heat_var_k():
+    t = sp.symbols('t')
+    x = sp.symbols('x')
+    alpha = sp.symbols('alpha')
+
+    u = t*x*x
+    f,u = functions.manufacture_solution(u,t,[x], k=alpha*u, alpha_var=alpha, d1=1,d2=1)
+
+    u = sp.sin(alpha*t+x)
+    f,u = functions.manufacture_solution(u,t,[x], k=u*u, alpha_var=alpha, d1=1,d2=1)
+
+    u = t*x*x
+    f,u = functions.manufacture_solution(u,t,[x], k=alpha*u/10+1, alpha_var=alpha, d1=1,d2=1)
+    
+    u = 2+alpha*(x-1)*sp.tanh(x/(t+0.1))
+    f,u = functions.manufacture_solution(u,t,[x], k=sp.sin(4*u)/2 + 1, alpha_var=alpha, d1=1,d2=1)
+    
+    u = sp.cos(x)*(sp.exp(-t/5)+sp.exp((t-1)/5)*2)
+    f,u = functions.manufacture_solution(u,t,[x], k=alpha*u/10+1, alpha_var=alpha, d1=1,d2=1)
+    quit()
 
 def test_2d_heat():
     t = sp.symbols('t')
@@ -296,9 +316,10 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
-    test_2d_elast()
+    test_manufacture_heat_var_k()
     quit()
     test_2d_heat()
+    test_2d_elast()
     test_fem_2d()
     test_in_triangle()
     test_reshaping()

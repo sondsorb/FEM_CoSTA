@@ -40,22 +40,6 @@ SBMFACT_TUNING = [
             ),
     ]
 
-# varying conductivity k=k(u) #TODO verify these!!
-k_0 = 1
-var_k = [
-            (
-                lambda x,t,alpha,time_delta: x**2 - alpha*6*x**2*t**2,
-                lambda x,t,alpha,time_delta: t*x**2
-            ),
-            (
-                lambda x,t,alpha,time_delta: alpha*np.cos(x+alpha*t) - 2*np.sin(x+alpha*t)*np.cos(x+alpha*t)**2 + np.sin(x+alpha)**3,
-                lambda x,t,alpha,time_delta: np.sin(x+alpha*t)
-            ),
-            (
-                lambda x,t,alpha,time_delta: x**2 - (alpha/30)*6*x**2*t**2 - 2*k_0*t,
-                lambda x,t,alpha,time_delta: t*x**2
-            ),
-    ]
 
 class Solution:
     def __init__(self, T, f_raw, u_raw, zero_source=True, name='?', time_delta=0, w_raw=None):
@@ -88,17 +72,18 @@ class Solution:
             t = self.T
         return self.w_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
 
-def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
+def manufacture_solution(u, t_var, x_vars, k=sp.Integer(1), alpha_var=None, d1=2, d2=1):
     '''Manufactures f from the 2d or 3d heat equation given u (sympy equation)
     returns functions with unused dimensions =0 (eg z=0 for 3d-2d)'''
-    print(d1,d2)
+    #print(d1,d2)
     assert d1>=d2
     assert d1<4
     assert d2>0
     f = u.diff(t_var)
     for d in range(d1):
-        f -= u.diff(x_vars[d], x_vars[d])
-    print('f:', f)
+        f -= u.diff(x_vars[d], x_vars[d])*k
+        f -= u.diff(x_vars[d])*k.diff(x_vars[d])
+    #print('f:', f)
     f_temp = lambdify([*[x_vars],t_var,alpha_var],f, "numpy")
     u_temp = lambdify([*[x_vars],t_var,alpha_var],u, "numpy")
     def f(x,t,alpha,time_delta=0):
@@ -111,6 +96,44 @@ def manufacture_solution(u, t_var, x_vars, alpha_var=None, d1=2, d2=1):
         x = [x] if length(x) == 0 else x
         return u_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     return (f,u)
+
+# varying conductivity k=k(u)
+t = sp.symbols('t')
+x = sp.symbols('x')
+alpha = sp.symbols('alpha')
+var_k = []
+k_0 = 1
+
+# Testing:
+u = t*x*x
+f,u = manufacture_solution(u,t,[x], k=alpha*u, alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
+u = sp.sin(alpha*t+x)
+f,u = manufacture_solution(u,t,[x], k=u*u, alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
+u = t*x*x
+f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
+# actual ones:
+u = sp.sin(alpha*t+x)
+f,u = manufacture_solution(u,t,[x], k=sp.sin(4*u)/2 + 1, alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
+u = sp.cos(x)*(sp.exp(-t/5)+sp.exp((t-1)/5)*2)
+f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
+u = 1-2*x + alpha*x**2 -t/2 + x*t/2
+f,u = manufacture_solution(u,t,[x], k=sp.exp(u/10), alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
+u = 1/(1+x) + (alpha+x)/(t+1)**0.5
+f,u = manufacture_solution(u,t,[x], k=sp.exp(-u/10), alpha_var=alpha, d1=1,d2=1)
+var_k.append((f,u))
+
 
 # Elasticity solutions:
 t = sp.symbols('t')
