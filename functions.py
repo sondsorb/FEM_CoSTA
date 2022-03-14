@@ -135,6 +135,29 @@ f,u = manufacture_solution(u,t,[x], k=sp.exp(-u/10), alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
 
+# BP heat
+y = sp.symbols('y')
+z = sp.symbols('z')
+dimred = []
+
+u = sp.sin(x+3*y+2*z + alpha*t)
+f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+dimred.append((f,u))
+
+u = (sp.cos(x)+sp.sin(z)+sp.sin(t+y))*(sp.exp(-t/5)+sp.exp((t-1)/5)*2)
+f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+dimred.append((f,u))
+
+u = 1-2*x+3*y-z + alpha*x**2 + alpha*x*z*y -t/2 + x*t/2 - z*t*y
+f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+dimred.append((f,u))
+
+u = 1/(1+x+y+z) + (alpha+x-y-z)/(t+1)**0.5
+f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+dimred.append((f,u))
+
+
+
 # Elasticity solutions:
 t = sp.symbols('t')
 x = sp.symbols('x')

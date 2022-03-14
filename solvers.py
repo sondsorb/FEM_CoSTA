@@ -435,15 +435,16 @@ class Solvers:
         for i, alpha in enumerate(alphas):
             axs[i].set_yscale('log')
             for name in l2_devs[f'{alpha}']:
-                curr_devs = np.array(l2_devs[f'{alpha}'][name])
-                mean = np.mean(curr_devs, axis=0)
-                if statplot and name!='FEM':
-                    axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
-                    std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
-                    axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)
-                else:
-                    for k, dev in enumerate(curr_devs):
-                        axs[i].plot(np.arange(len(mean)), dev, color=COLORS[name], label=name if k==0 else None)
+                if not name in ignore_models:
+                    curr_devs = np.array(l2_devs[f'{alpha}'][name])
+                    mean = np.mean(curr_devs, axis=0)
+                    if statplot and name!='FEM':
+                        axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
+                        std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
+                        axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)
+                    else:
+                        for k, dev in enumerate(curr_devs):
+                            axs[i].plot(np.arange(len(mean)), dev, color=COLORS[name], label=name if k==0 else None)
 
             axs[i].grid()
             axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
