@@ -118,19 +118,19 @@ f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1
 var_k.append((f,u))
 
 # actual ones:
-u = sp.sin(alpha*t+x)
-f,u = manufacture_solution(u,t,[x], k=sp.sin(4*u)/2 + 1, alpha_var=alpha, d1=1,d2=1)
+u = sp.sin(5*alpha*t+x)
+f,u = manufacture_solution(u,t,[x], k=sp.sin(2*alpha*u)/2 + 1, alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
-u = sp.cos(x)*(sp.exp(-t/5)+sp.exp((t-1)/5)*2)
+u = sp.cos(x)*(sp.exp(-t)+sp.exp((t-1))*2)
 f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
-u = 1-2*x + alpha*x**2 -t/2 + x*t/2
+u = 1-2*x + alpha*x**2 -t*2 + x*t*2
 f,u = manufacture_solution(u,t,[x], k=sp.exp(u/10), alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
-u = 1/(1+x) + (alpha+x)/(t+1)**0.5
+u = 1/(1+x) + (alpha+x)/(5*t+1)**0.5
 f,u = manufacture_solution(u,t,[x], k=sp.exp(-u/10), alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
@@ -140,19 +140,19 @@ y = sp.symbols('y')
 z = sp.symbols('z')
 dimred = []
 
-u = sp.sin(x+3*y+2*z + alpha*t)
+u = sp.sin(x+3*y+2*z + 4*alpha*t)
 f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = (sp.cos(x)+sp.sin(z)+sp.sin(t+y))*(sp.exp(-t/5)+sp.exp((t-1)/5)*2)
+u = (sp.cos(x)+sp.sin(z)+sp.sin(t+y))*(sp.exp(-t)+sp.exp((t-1))*2)
 f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = 1-2*x+3*y-z + alpha*x**2 + alpha*x*z*y -t/2 + x*t/2 - z*t*y
+u = 1-2*x+3*y-z + alpha*x**2 + alpha*x*z*y -t*2 + x*t*2 - 4*z*t*y
 f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = 1/(1+x+y+z) + (alpha+x-y-z)/(t+1)**0.5
+u = 1/(1+x+y+z) + (alpha+x-y-z)/(5*t+1)**0.5
 f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 

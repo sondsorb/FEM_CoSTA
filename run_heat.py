@@ -65,7 +65,7 @@ for sol_index in [3,4,5,6]:
     print(f'sol_index: {sol_index}\n')
     f,u = functions.var_k[sol_index]
     solname = f'var_k{sol_index}'
-    T = 5
+    T = 1
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=not source, name=solname, time_delta=time_delta)
     model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, NNkwargs=NNkwargs)
     extra_tag = '_sq' # for different names when testing specific stuff
