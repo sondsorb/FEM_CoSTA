@@ -97,12 +97,12 @@ for sol_index in [3,4,5,6]:
         model.disc.T = (i+1)*T/midplots
         model.sol.T = model.disc.T
         model.disc.time_steps = ((i+1)*time_steps)//midplots
-        extra_tag = f'_t{model.disc.time_steps}' if i<midplots-1 else ''
+        extra_tag_2 = f'{extra_tag}_t{model.disc.time_steps}' if i<midplots-1 else extra_tag
 
-        result_folder = f'../master/saved_results/1d_heat/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/extrapol/'
+        result_folder = f'../master/saved_results/1d_heat/{"known_f" if source else "unknown_f"}/{mode}{extra_tag_2}/extrapol/'
         utils.makefolder(result_folder)
         _ = model.test(interpol = False, result_folder=result_folder)
-        figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}{extra_tag}'
+        figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}{extra_tag_2}'
         model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 4)
-        figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}_nonstat{extra_tag}'
+        figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/extrapol/sol{sol_index}_nonstat{extra_tag_2}'
         model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
