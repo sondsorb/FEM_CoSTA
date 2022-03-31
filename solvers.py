@@ -359,8 +359,8 @@ class Solvers:
         graphs2d={}
         if self.disc.dim==2:
             N = len(self.disc.pts_line)-1
-            X2d = np.array([np.linspace(-1,1,N+1)]*(N+1)).T
-            Y2d = np.array([np.linspace(-1,1,N+1)]*(N+1))
+            X2d = np.array([np.linspace(self.disc.xa,self.disc.xb,N+1)]*(N+1)).T
+            Y2d = np.array([np.linspace(self.disc.ya,self.disc.yb,N+1)]*(N+1))
             pts2d = np.array([X2d,Y2d]).T
 
         for i, alpha in enumerate(alphas):

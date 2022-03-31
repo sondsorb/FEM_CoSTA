@@ -51,13 +51,13 @@ NNkwargs = {
         }
 
 
-xa,xb,ya,yb = -1,1,-1,1
-for i in [0,1,2]:
+xa,xb,ya,yb = 0,1,0,1
+for i in [3,1,2,0]:
     f,u = functions.dimred[i]
     sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
     
     model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)
-    extra_tag = '' # for different names when testing specific stuff
+    extra_tag = '_01' # for different names when testing specific stuff
     figname = None
     figname = f'../master/bp_heat_figures/{mode}/interpol/loss_sol{i}{extra_tag}.pdf'
     model_folder = f'../master/saved_models/bp_heat/{mode}{extra_tag}/interpol/'

@@ -10,17 +10,17 @@
 #   edge  	Index list of all nodal points on the outer edge (r=1).
 #
 #   Author: Kjetil A. Johannessen, Abdullah Abdulhaque
-#   Last edit: October 2019
-#   Edited November 2020 by Sondre Sørbø.
+#   Edited by Sondre Sørbø.
 
 import numpy as np
 import scipy.spatial as spsa
 
 
-def getPlate(N):
+def getPlate(N, xa, xb, ya, yb):
     # Defining auxiliary variables.
-    L = np.linspace(-1,1,N)
-    Y,X = np.meshgrid(L,L)
+    Lx = np.linspace(xa,xb,N)
+    Ly = np.linspace(ya,yb,N)
+    Y,X = np.meshgrid(Lx,Ly)
     x = np.ravel(np.transpose(X))
     y = np.ravel(np.transpose(Y))
 

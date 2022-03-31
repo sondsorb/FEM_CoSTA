@@ -53,8 +53,7 @@ class Fem_1d:
                             l*=(x-pts[i+k])/(pts[i+j]-pts[i+k])
                     result += vct[i+j]*l
                 return result
-        print('Error: function evaluated outside domain')
-        return 1/0
+        raise ValueError(f'Function evaluated outside domain, x={x}')
 
     def solution(self, x):
         if length(x)>0:
@@ -284,8 +283,7 @@ class Fem_2d:
             x_local = np.linalg.solve(A, x-p1)
             if x_local[0]>=-1e-15 and x_local[1]>=-1e-15 and x_local[0]+x_local[1]<=1+1e-15:
                 return u[i1] + x_local[0]*(u[i2]-u[i1]) + x_local[1]*(u[i3]-u[i1])
-        print('Error: function evaluated outside domain')
-        return 1/0
+        raise ValueError(f'Function evaluated outside domain, x={x}')
 
     def solution(self, x):
         if length(x[0])>0: # not single x and y values
@@ -496,8 +494,7 @@ class Elasticity_2d():
                            u[2*i1] + x_local[0]*(u[2*i2]-u[2*i1]) + x_local[1]*(u[2*i3]-u[2*i1]),
                            u[2*i1+1] + x_local[0]*(u[2*i2+1]-u[2*i1+1]) + x_local[1]*(u[2*i3+1]-u[2*i1+1])
                        )
-        print('Error: function evaluated outside domain')
-        return 1/0
+        raise ValueError(f'Function evaluated outside domain, x={x}')
 
     def solution(self, x):
         if length(x[0])>0: # not single x and y values
@@ -693,6 +690,10 @@ class Disc: # short for disctretizatoin
         self.udim=dim if equation=='elasticity' else 1 # dimensionality of u
         self.equation=equation
         self.static=static # only relevant for elasticity
+        self.xa=xa
+        self.xb=xb
+        self.ya=ya
+        self.yb=yb
         
         if dim == 1:
             self.pts = np.linspace(xa,xb,Ne*p+1) # Note Ne is in each dimension (for now at least)
@@ -701,8 +702,8 @@ class Disc: # short for disctretizatoin
             self.edge_ids2 = self.edge_ids1
             self.pts_line = self.pts_fine
         elif dim == 2:
-            self.pts, self.tri, self.edge = getplate.getPlate(Ne+1)
-            self.pts_fine, self.tri_fine, self.edge_fine = getplate.getPlate(Ne*4+1)
+            self.pts, self.tri, self.edge = getplate.getPlate(Ne+1, xa=xa, xb=xb, ya=ya, yb=yb)
+            self.pts_fine, self.tri_fine, self.edge_fine = getplate.getPlate(Ne*4+1, xa=xa, xb=xb, ya=ya, yb=yb)
             self.edge_ids1 = self.edge[:,0] # indices of points in pts that are on the edge
             self.edge_ids2 = self.edge_ids1  # indices in u_fem correspondting to the edge points (differ from edge_ids1 when udim>1)
             if equation == 'elasticity':
