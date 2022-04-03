@@ -32,7 +32,7 @@ COLORS = {
 ###   Solver class compares the different solvers defined in methods.py   ###
 #############################################################################
 class Solvers:
-    def __init__(self, sol, equation='heat', models=None, modelnames=None, Ne=10, time_steps=20, p=1, xa=0, xb=1, ya=0, yb=1, dim=1, static=False, NNkwargs={}):
+    def __init__(self, sol, equation='heat', models=None, modelnames=None, Ne=10, time_steps=20, p=1, xa=0, xb=1, ya=0, yb=1, dim=1, static=False, skip_create_data=False, NNkwargs={}):
         '''
         either models or modelnames must be specified, not both
         models - list of models
@@ -99,7 +99,8 @@ class Solvers:
                     self.modelnames[model.name] += 1
                 else:
                     self.modelnames[model.name] = 1
-        self.create_data()
+        if not skip_create_data:
+            self.create_data()
 
 
 
@@ -332,7 +333,8 @@ class Solvers:
             interpol = True, 
             figname=None, 
             statplot = 5, 
-            ignore_models=[]
+            ignore_models=[],
+            legend=True
             ):
         '''
         interpol - (bool) use interpolating or extrapolating alpha set
@@ -420,7 +422,8 @@ class Solvers:
                     for k, graph in enumerate(curr_graphs):
                         axs[i].plot(line, graph, color=COLORS[name], label=name if k==0 else None, linestyle = '--' if name=='exact' else '-')
             axs[i].grid()
-            axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+            if legend:
+                axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
         plt.tight_layout()
         if figname != None:
@@ -447,7 +450,8 @@ class Solvers:
                             axs[i].plot(np.arange(len(mean)), dev, color=COLORS[name], label=name if k==0 else None)
 
             axs[i].grid()
-            axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+            if legend:
+                axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
         plt.tight_layout()
         if figname != None:
