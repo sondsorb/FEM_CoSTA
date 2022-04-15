@@ -33,5 +33,15 @@ def set_args(mode, dim=1):
         pgLSTMkwargs = {'lstm_layers':4, 'lstm_depth':16, 'dense_layers':2, 'dense_depth':80, 'lr':1e-5, 'patience':[20,20], 'input_period':10}
         NoM=10
         time_delta = 0
+    elif mode == 'el_test':
+        Ne = 20 if dim==1 else 15
+        time_steps = 5000 if dim==1 else 1000
+        #DNNkwargs = {'n_layers_1':1, 'n_layers_2':2,'depth':80, 'bn_depth':8, 'lr':1e-5, 'patience':[20,20]}
+        DNNkwargs = {'n_layers_1':1, 'n_layers_2':2,'depth':80, 'bn_depth':80, 'lr':1e-5, 'patience':[20,20]}
+        pgDNNkwargs = {'n_layers_1':1, 'n_layers_2':2,'depth':80,'bn_depth':8,'lr':1e-5,'patience':[20,20]}
+        LSTMkwargs = {'lstm_layers':4, 'lstm_depth':80, 'dense_layers':2, 'dense_depth':80, 'lr':5e-5, 'patience':[20,20]}
+        pgLSTMkwargs = {'lstm_layers':4, 'lstm_depth':16, 'dense_layers':2, 'dense_depth':80, 'lr':4e-5, 'patience':[20,20], 'input_period':10}
+        NoM=10
+        time_delta = 0
 
     return Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta

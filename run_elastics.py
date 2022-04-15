@@ -14,7 +14,8 @@ mode = 'bugfix'
 if len(sys.argv)>1:
     mode = {'0':'bugfix',
             '1':'quick_test',
-            '2':'full_test'}[sys.argv[1]]
+            '2':'full_test',
+            '3':'el_test'}[sys.argv[1]]
 else:
     print('No mode specified')
     print('add arg for mode:')
@@ -71,8 +72,8 @@ NNkwargs = {
 
 #assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
 
-xa,xb,ya,yb = -1,1,-1,1
-for i in [0,1,2]:
+xa,xb,ya,yb = 0,1,0,1
+for i in [1,2]:
     print(f'sol_index: {i}\n')
     T = 1
     if source == 'reduced_source':
@@ -90,22 +91,23 @@ for i in [0,1,2]:
     model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
     
-    model.plot=True
+    model.plot=False
+    legend=False
 
     # Interpolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
     _ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5, legend=legend)
+    #figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}'
+    #model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
 
     # Extrapolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/extrapol/'
     utils.makefolder(result_folder)
     _ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5)
-    figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, legend=legend)
+    #figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}'
+    #model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
