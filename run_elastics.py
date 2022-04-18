@@ -34,6 +34,8 @@ if len(sys.argv)>2:
         source = 'exact_source'
     elif sys.argv[2]=='0':
         source = 'zero_source'
+    elif sys.argv[2]=='nl':
+        source = 'non_linear'
     else:
         print('failed reading source term')
         source = 'exact_source'
@@ -73,13 +75,13 @@ NNkwargs = {
 #assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
 
 xa,xb,ya,yb = 0,1,0,1
-for i in [1,2]:
+for i in [0,1,2]:
     print(f'sol_index: {i}\n')
     T = 1
     if source == 'reduced_source':
         f,u,w = functions.manufacture_elasticity_solution(d1=3, d2=2, static=static, **functions.ELsols3d[i])
     else:
-        f,u,w = functions.manufacture_elasticity_solution(d1=2, d2=2, static=static, **functions.ELsols[i])
+        f,u,w = functions.manufacture_elasticity_solution(d1=2, d2=2, static=static, non_linear=source=='non_linear', **functions.ELsols[i])
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=source=='zero_source', name=f'ELsol{i}',w_raw=w)
     
     model = solvers.Solvers(equation='elasticity', static=static, modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)

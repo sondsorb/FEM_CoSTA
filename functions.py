@@ -215,7 +215,7 @@ ELsols3d = [
             }
          ]
 
-def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2, nu=0.25, static=False):
+def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2, nu=0.25, static=False, non_linear=False):
     '''Manufactures f from the elasticity equation given u (list of sympy equations)
     returns functions with unused dimensions=0'''
     print('manufacturing solution, from', d1, 'to', d2, 'dimensions.')
@@ -233,7 +233,10 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
             [nu,1,0],
             [0,0,(1-nu)/2]
             ])/(1-nu**2)
-        sigma_bar = C @ epsilon_bar
+        E = 1
+        if non_linear:
+            E = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2 +15)**0.5/5
+        sigma_bar = E*C @ epsilon_bar
 
         # static: f = -Div(sigma) (remember sigma != sigma_bar)
         f = np.array([-sigma_bar[0].diff(x_vars[0]) -sigma_bar[2].diff(x_vars[1]),
@@ -256,6 +259,7 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
             [0,0,0,0,0,1/2-nu]
             ]) / ((1+nu)*(1-2*nu))
         sigma_bar = C @ epsilon_bar
+        assert not non_linear
 
         # static: f = -Div(sigma) (remember sigma != sigma_bar)
         f = -np.array([
@@ -273,9 +277,23 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
     f_temp = lambdify([*[x_vars],t_var,alpha_var],f[:d2], "numpy")
     u_temp = lambdify([*[x_vars],t_var,alpha_var],u[:d2], "numpy")
     w_temp = lambdify([*[x_vars],t_var,alpha_var],[ui.diff(t_var) for ui in u[:d2]], "numpy")
+
+    # for tedting, delete
+    #E_temp = lambdify([*[x_vars],t_var,alpha_var],E, "numpy")
+    #global E_max, E_min
+    #E_max = 0
+    #E_min = 10
     
     # make functions
     def f(x,t,alpha,time_delta=0):
+        #E_val = E_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
+        #global E_min, E_max
+        #if E_val < E_min*.99:
+        #    E_min = E_val
+        #    print(E_val, end=',')
+        #if E_val > E_max*1.01:
+        #    E_max = E_val
+        #    print(E_val, end=',')
         x = [x] if length(x) == 0 else x
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     def u(x,t,alpha,time_delta=0):
