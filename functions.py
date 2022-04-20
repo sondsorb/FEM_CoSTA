@@ -235,7 +235,8 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
             ])/(1-nu**2)
         E = 1
         if non_linear:
-            E = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2 +15)**0.5/5
+            E = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2 +40)**0.5/8
+            #E = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2 +15)**0.5/5 # this was used with no tag quick test ~15-17 april
         sigma_bar = E*C @ epsilon_bar
 
         # static: f = -Div(sigma) (remember sigma != sigma_bar)
@@ -278,22 +279,22 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
     u_temp = lambdify([*[x_vars],t_var,alpha_var],u[:d2], "numpy")
     w_temp = lambdify([*[x_vars],t_var,alpha_var],[ui.diff(t_var) for ui in u[:d2]], "numpy")
 
-    # for tedting, delete
-    #E_temp = lambdify([*[x_vars],t_var,alpha_var],E, "numpy")
-    #global E_max, E_min
-    #E_max = 0
-    #E_min = 10
+    # For controlling and/or plotting level of nonlinearity
+    if non_linear:
+        E_temp = lambdify([*[x_vars],t_var,alpha_var],E, "numpy")
+        global E_max, E_min
+        E_max = 0
+        E_min = 10
     
     # make functions
     def f(x,t,alpha,time_delta=0):
-        #E_val = E_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
-        #global E_min, E_max
-        #if E_val < E_min*.99:
-        #    E_min = E_val
-        #    print(E_val, end=',')
-        #if E_val > E_max*1.01:
-        #    E_max = E_val
-        #    print(E_val, end=',')
+        if non_linear:
+            E_val = E_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
+            global E_min, E_max
+            if E_val < E_min:
+                E_min = E_val
+            if E_val > E_max:
+                E_max = E_val
         x = [x] if length(x) == 0 else x
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     def u(x,t,alpha,time_delta=0):
@@ -309,3 +310,8 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
         x = [x] if length(x) == 0 else x
         return w_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     return (f,u, w)
+
+def plot_elastic_nonlinearity():
+    global E_min, E_max
+    print('Minimum E:', E_min)
+    print('Maximum E:', E_max)

@@ -75,7 +75,7 @@ NNkwargs = {
 #assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
 
 xa,xb,ya,yb = 0,1,0,1
-for i in [0,1,2]:
+for i in [1,2]:
     print(f'sol_index: {i}\n')
     T = 1
     if source == 'reduced_source':
@@ -85,7 +85,8 @@ for i in [0,1,2]:
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=source=='zero_source', name=f'ELsol{i}',w_raw=w)
     
     model = solvers.Solvers(equation='elasticity', static=static, modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)
-    extra_tag = '' # for different names when testing specific stuff
+    functions.plot_elastic_nonlinearity()
+    extra_tag = '_almostLinear' # for different names when testing specific stuff
     figname = None
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/loss_sol{i}{extra_tag}.pdf'
     model_folder = f'../master/saved_models/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/'#_explosions/'
