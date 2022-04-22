@@ -199,6 +199,7 @@ class Solvers:
 
         print(f'\nTime training all models: {datetime.datetime.now()-start_time}')
 
+        plt.tight_layout()
         if figname != None:
             plt.savefig(figname+'.pdf')
         if self.plot:
@@ -494,6 +495,7 @@ class Solvers:
                             plt.colorbar(im, ax=ax)
                             plt.title(f'mean {name} error')
 
+            plt.tight_layout()
             if figname != None:
                 plt.savefig(figname+'_2d.pdf')
             if self.plot:
@@ -524,6 +526,7 @@ class Solvers:
                             plt.colorbar(im, ax=ax)
                             plt.title(f'std {name} error')
 
+            plt.tight_layout()
             if figname != None:
                 plt.savefig(figname+'_2d_std.pdf')
             if self.plot:

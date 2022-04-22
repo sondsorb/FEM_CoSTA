@@ -86,8 +86,31 @@ def manufacture_solution(u, t_var, x_vars, k=sp.Integer(1), alpha_var=None, d1=2
     #print('f:', f)
     f_temp = lambdify([*[x_vars],t_var,alpha_var],f, "numpy")
     u_temp = lambdify([*[x_vars],t_var,alpha_var],u, "numpy")
+
+
+
+    # For controlling and/or plotting level of nonlinearity
+    k_temp = lambdify([*[x_vars],t_var,alpha_var],k, "numpy")
+    global k_max, k_min, u_max, u_min
+    k_max = -100
+    k_min = 100
+    u_max = -100
+    u_min = 100
+    
+    # make functions
     def f(x,t,alpha,time_delta=0):
         x = [x] if length(x) == 0 else x
+        k_val = k_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
+        u_val = u_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
+        global k_max, k_min, u_max, u_min
+        if k_val < k_min:
+            k_min = k_val
+        if k_val > k_max:
+            k_max = k_val
+        if u_val < u_min:
+            u_min = u_val
+        if u_val > u_max:
+            u_max = u_val
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     def u(x,t,alpha,time_delta=0):
         if length(x)>d2: # if x is a list, and not a single point, we unpack recursively
@@ -118,11 +141,11 @@ f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1
 var_k.append((f,u))
 
 # actual ones:
-u = sp.sin(5*alpha*t+x)
+u = sp.sin(5*alpha*t+x)+sp.sin(alpha*x)/2
 f,u = manufacture_solution(u,t,[x], k=sp.sin(2*alpha*u)/2 + 1, alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
-u = sp.cos(x)*(sp.exp(-t)+sp.exp((t-1))*2)
+u = sp.cos(x*alpha)*(sp.exp(-t)+sp.exp((t-1))*2)
 f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
 
@@ -235,8 +258,9 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
             ])/(1-nu**2)
         E = 1
         if non_linear:
-            E = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2 +40)**0.5/8
-            #E = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2 +15)**0.5/5 # this was used with no tag quick test ~15-17 april
+            e = (epsilon_bar[0]**2+epsilon_bar[1]**2+u[1].diff(x_vars[0])**2+u[0].diff(x_vars[1])**2)**0.5 # norm of epsilon
+            A, c = 10,20
+            E = A / (2*(c+e)**0.5)
         sigma_bar = E*C @ epsilon_bar
 
         # static: f = -Div(sigma) (remember sigma != sigma_bar)
@@ -281,20 +305,28 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
 
     # For controlling and/or plotting level of nonlinearity
     if non_linear:
+        e_temp = lambdify([*[x_vars],t_var,alpha_var],e, "numpy")
         E_temp = lambdify([*[x_vars],t_var,alpha_var],E, "numpy")
-        global E_max, E_min
+        global E_max, E_min, e_max, e_min
         E_max = 0
-        E_min = 10
+        E_min = 100
+        e_max = 0
+        e_min = 100
     
     # make functions
     def f(x,t,alpha,time_delta=0):
         if non_linear:
             E_val = E_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
-            global E_min, E_max
+            e_val = e_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha) 
+            global E_min, E_max, e_min, e_max
             if E_val < E_min:
                 E_min = E_val
             if E_val > E_max:
                 E_max = E_val
+            if e_val < e_min:
+                e_min = e_val
+            if e_val > e_max:
+                e_max = e_val
         x = [x] if length(x) == 0 else x
         return f_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     def u(x,t,alpha,time_delta=0):
@@ -311,7 +343,19 @@ def manufacture_elasticity_solution(u, x_vars, t_var, alpha_var=None, d1=2, d2=2
         return w_temp([*x, *[0 for i in range(d1-d2)]], t=t, alpha=alpha)
     return (f,u, w)
 
-def plot_elastic_nonlinearity():
-    global E_min, E_max
-    print('Minimum E:', E_min)
-    print('Maximum E:', E_max)
+def get_elastic_nonlinearity():
+    global E_min, E_max, e_min, e_max
+    #print('Minimum E:', E_min)
+    #print('Maximum E:', E_max)
+    return E_min, E_max, e_min, e_max
+
+def get_heat_nonlinearity():
+    global k_min, k_max, u_min, u_max
+    #print('Minimum E:', E_min)
+    #print('Maximum E:', E_max)
+    res = k_min, k_max, u_min, u_max
+    k_min = 100
+    u_min = 100
+    u_max = -100
+    k_max = -100
+    return res
