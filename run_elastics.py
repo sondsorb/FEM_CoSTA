@@ -88,7 +88,7 @@ for i in [1,2]:
     figname = None
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/loss_sol{i}{extra_tag}.pdf'
     model_folder = f'../master/saved_models/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/'#_explosions/'
-    model.plot=True
+    model.plot=False
     model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
     

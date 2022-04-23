@@ -163,11 +163,11 @@ y = sp.symbols('y')
 z = sp.symbols('z')
 dimred = []
 
-u = sp.sin(x+3*y+2*z + 4*alpha*t)
+u = sp.sin(x+alpha*y+2*z + 4*alpha*t)
 f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = (sp.cos(x)+sp.sin(z)+sp.sin(t+y))*(sp.exp(-t)+sp.exp((t-1))*2)
+u = (sp.cos(alpha*x)+sp.sin(alpha+z)+sp.sin(t+y))*(sp.exp(-t)+sp.exp((t-1))*2)
 f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
