@@ -11,7 +11,7 @@ import FEM
 from utils import merge_first_dims
 import methods
 
-COLORS = {
+COLORS = { # Note some have same colors, should not be used at the same time
         'exact':'k', # blacK
         'FEM':(1,0,0),# red
         'DNN':(0.9,0.6,0), #gold
@@ -24,6 +24,7 @@ COLORS = {
         'CoSTA_LSTM':'c',
         'CoSTA_pgLSTM':(0.67,1,0),
         'CoSTA_pgLR':(0.67,1,0), # WARNING: SAME AS ABOVE
+        'FEM_2':(0,0.5,0), # Green # WARNING: SAME AS CoSTA_pgDNN
         }
 
 
@@ -407,7 +408,7 @@ class Solvers:
             self.sol.set_alpha(alpha)
             for name in graphs1d[alpha]:
                 curr_graphs = np.array(graphs1d[alpha][name])
-                if statplot and not name in ['FEM', 'exact']:
+                if statplot and not name in ['FEM', 'exact', 'FEM_2']:
                     mean = np.mean(curr_graphs, axis=0)
                     std = np.std(curr_graphs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
                     if self.disc.dim==1:
@@ -442,7 +443,7 @@ class Solvers:
                 if not name in ignore_models:
                     curr_devs = np.array(l2_devs[f'{alpha}'][name])
                     mean = np.mean(curr_devs, axis=0)
-                    if statplot and name!='FEM':
+                    if statplot and not name in ['FEM', 'FEM_2']:
                         axs[i].plot(np.arange(len(mean)), mean, color=COLORS[name])
                         std = np.std(curr_devs, axis=0, ddof=1) # reduce one degree of freedom due to mean calculation
                         axs[i].fill_between(np.arange(len(mean)), mean+std, mean, color=COLORS[name], alpha = 0.4, label = name)

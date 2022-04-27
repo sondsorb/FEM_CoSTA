@@ -163,21 +163,39 @@ y = sp.symbols('y')
 z = sp.symbols('z')
 dimred = []
 
-u = sp.sin(x+alpha*y+2*z + 4*alpha*t)
-f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+u1 = sp.sin(x+alpha*y+2*z + 4*alpha*t)
+f,u = manufacture_solution(u1,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = (sp.cos(alpha*x)+sp.sin(alpha+z)+sp.sin(t+y))*(sp.exp(-t)+sp.exp((t-1))*2)
-f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+u2 = (sp.cos(alpha*x)+sp.sin(alpha+z)+sp.sin(t+y))*(sp.exp(-t)+sp.exp((t-1))*2)
+f,u = manufacture_solution(u2,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = 1-2*x+3*y-z + alpha*x**2 + alpha*x*z*y -t*2 + x*t*2 - 4*z*t*y
-f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+u3 = 1-2*x+3*y-z + alpha*x**2 + alpha*x*z*y -t*2 + x*t*2 - 4*z*t*y
+f,u = manufacture_solution(u3,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
-u = 1/(1+x+y+z) + (alpha+x-y-z)/(5*t+1)**0.5
-f,u = manufacture_solution(u,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+u4 = 1/(1+x+y+z) + (alpha+x-y-z)/(5*t+1)**0.5
+f,u = manufacture_solution(u4,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
+
+u1 = u1.subs(z,0)
+u2 = u2.subs(z,0)
+u3 = u3.subs(z,0)
+u4 = u4.subs(z,0)
+lowdimred = []
+f_1,u_1 = manufacture_solution(u1,t,[x,y], alpha_var=alpha, d1=2,d2=1)
+f_2,u_2 = manufacture_solution(u1,t,[x,y], alpha_var=alpha, d1=2,d2=2)
+lowdimred.append((f_1,u_1,f_2,u_2))
+f_1,u_1 = manufacture_solution(u2,t,[x,y], alpha_var=alpha, d1=2,d2=1)
+f_2,u_2 = manufacture_solution(u2,t,[x,y], alpha_var=alpha, d1=2,d2=2)
+lowdimred.append((f_1,u_1,f_2,u_2))
+f_1,u_1 = manufacture_solution(u3,t,[x,y], alpha_var=alpha, d1=2,d2=1)
+f_2,u_2 = manufacture_solution(u3,t,[x,y], alpha_var=alpha, d1=2,d2=2)
+lowdimred.append((f_1,u_1,f_2,u_2))
+f_1,u_1 = manufacture_solution(u4,t,[x,y], alpha_var=alpha, d1=2,d2=1)
+f_2,u_2 = manufacture_solution(u4,t,[x,y], alpha_var=alpha, d1=2,d2=2)
+lowdimred.append((f_1,u_1,f_2,u_2))
 
 
 

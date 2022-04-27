@@ -35,10 +35,10 @@ print(f'Using p={p}')
 
 modelnames = {
         'DNN' : NoM,
-        'pgDNN' : NoM,
+        #'pgDNN' : NoM,
         #'LSTM' : NoM,
         'CoSTA_DNN' : NoM,
-        'CoSTA_pgDNN' : NoM,
+        #'CoSTA_pgDNN' : NoM,
         #'CoSTA_LSTM' : NoM,
         }
 NNkwargs = {
@@ -52,27 +52,26 @@ NNkwargs = {
 
 
 xa,xb,ya,yb = 0,1,0,1
-for i in [3,1,2,0]:
+for i in [1,0]:
     f,u = functions.dimred[i]
     sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
     
-    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, skip_create_data=True, NNkwargs=NNkwargs)
-    extra_tag = '_noleg' # for different names when testing specific stuff
-    figname = None
-    figname = f'../master/bp_heat_figures/{mode}/interpol/loss_sol{i}{extra_tag}.pdf'
+    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, skip_create_data=False, NNkwargs=NNkwargs)
+    extra_tag = '' # for different names when testing specific stuff
+    figname = f'../master/bp_heat_figures/{mode}/interpol/loss_sol{i}{extra_tag}'
     model_folder = f'../master/saved_models/bp_heat/{mode}{extra_tag}/interpol/'
     model.plot=False
-    #model.train(figname=figname, model_folder = model_folder)
+    model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
     
-    ignore_models = ['pgDNN', 'CoSTA_pgDNN']
-    #ignore_models = []
+    #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
+    ignore_models = []
     legend=False
     
     # Interpolation
     result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
-    #_ = model.test(interpol = True, result_folder=result_folder)
+    _ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/bp_heat_figures/{mode}/interpol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5, ignore_models = ignore_models, legend=legend)
     #figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}_nonstat{extra_tag}'
@@ -81,7 +80,7 @@ for i in [3,1,2,0]:
     # Extrapolation
     result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/extrapol/'
     utils.makefolder(result_folder)
-    #_ = model.test(interpol = False, result_folder=result_folder)
+    _ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, ignore_models = ignore_models, legend=legend)
     #figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}_nonstat{extra_tag}'

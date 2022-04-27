@@ -69,15 +69,15 @@ for sol_index in [3,4]:
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=not source, name=solname, time_delta=time_delta)
     model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, skip_create_data=False, NNkwargs=NNkwargs)
     extra_tag = '' # for different names when testing specific stuff
-    figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/interpol/loss_sol{sol_index}{extra_tag}.pdf'
-    model.plot=True
+    figname = f'../master/1d_heat_figures/{"known_f" if source else "unknown_f"}/{mode}/interpol/loss_sol{sol_index}{extra_tag}'
+    model.plot=False
     model_folder = f'../master/saved_models/1d_heat/{"known_f" if source else "unknown_f"}/{mode}{extra_tag}/'
     model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
 
     #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
     ignore_models = []
-    legend=True
+    legend=False
 
     # Interpolation
     midplots = 1
