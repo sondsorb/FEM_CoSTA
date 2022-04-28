@@ -70,32 +70,56 @@ def test_2d_heat():
     x = sp.symbols('x')
     y = sp.symbols('y')
     alpha = sp.symbols('alpha')
-    u = sp.exp(-t/(3.5-x**2-(y-(1+alpha)/4)**2))
-    #u = x*x+y*y+t
+    #u = sp.exp(-t/(3.5-x**2-(y-(1+alpha)/4)**2))
+    u = 2*x*x+3*y*y+t
 
     f,u = functions.manufacture_solution(u,t,[x,y],alpha_var=alpha, d1=2,d2=2)
     sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'2d_tst1')
     sol.set_alpha(1)
 
-    print('The following 3 numbers are L2 for increasing amount of nodes and steps, so they should approach zero:')
+    print('The following 6 numbers are l2 for increasing amount of nodes and steps, so they should approach zero:')
     n=3
-    pts, tri, edge = getplate.getPlate(n)
+    pts, tri, edge = getplate.getPlate(n, 0,1,0,1)
     fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
     fem_model.solve(5)
-    print(fem_model.relative_L2())
-    fem_model.plot_solution()
+    print(np.sqrt(np.mean((fem_model.u_fem - sol.u(pts))**2)))
+    #print(fem_model.relative_L2())
+    #fem_model.plot_solution()
     n=6
-    pts, tri, edge = getplate.getPlate(n)
+    pts, tri, edge = getplate.getPlate(n, 0,1,0,1)
     fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
     fem_model.solve(20)
-    print(fem_model.relative_L2())
-    fem_model.plot_solution()
+    print(np.sqrt(np.mean((fem_model.u_fem - sol.u(pts))**2)))
+    #print(fem_model.relative_L2())
+    #fem_model.plot_solution()
     n=10
-    pts, tri, edge = getplate.getPlate(n)
+    pts, tri, edge = getplate.getPlate(n, 0,1,0,1)
     fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
     fem_model.solve(50)
-    print(fem_model.relative_L2())
-    fem_model.plot_solution()
+    print(np.sqrt(np.mean((fem_model.u_fem - sol.u(pts))**2)))
+    #print(fem_model.relative_L2())
+    #fem_model.plot_solution()
+    n=14
+    pts, tri, edge = getplate.getPlate(n, 0,1,0,1)
+    fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model.solve(100)
+    print(np.sqrt(np.mean((fem_model.u_fem - sol.u(pts))**2)))
+    #print(fem_model.relative_L2())
+    #fem_model.plot_solution()
+    n=17
+    pts, tri, edge = getplate.getPlate(n, 0,1,0,1)
+    fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model.solve(200)
+    print(np.sqrt(np.mean((fem_model.u_fem - sol.u(pts))**2)))
+    #print(fem_model.relative_L2())
+    #fem_model.plot_solution()
+    n=20
+    pts, tri, edge = getplate.getPlate(n, 0,1,0,1)
+    fem_model = FEM.Heat_2d(pts, tri, edge, f=sol.f, p=1, u_ex=sol.u)
+    fem_model.solve(500)
+    print(np.sqrt(np.mean((fem_model.u_fem - sol.u(pts))**2)))
+    #print(fem_model.relative_L2())
+    #fem_model.plot_solution()
 
 
 
@@ -316,9 +340,9 @@ def sindres_mfact_test(sol=0, alpha=0.5, p=4):
 
 
 if __name__ == '__main__':
-    test_manufacture_heat_var_k()
-    quit()
     test_2d_heat()
+    quit()
+    test_manufacture_heat_var_k()
     test_2d_elast()
     test_fem_2d()
     test_in_triangle()

@@ -18,9 +18,12 @@ import scipy.spatial as spsa
 
 def getPlate(N, xa, xb, ya, yb):
     # Defining auxiliary variables.
-    Lx = np.linspace(xa,xb,N)
-    Ly = np.linspace(ya,yb,N)
+    Lx = np.linspace(ya,yb,N)
+    Ly = np.linspace(xa,xb,N)
+    #Ly = np.linspace(ya,yb,N)
+    #Lx = np.linspace(xa,xb,N)
     Y,X = np.meshgrid(Lx,Ly)
+    #X,Y = np.meshgrid(Lx,Ly)
     x = np.ravel(np.transpose(X))
     y = np.ravel(np.transpose(Y))
 

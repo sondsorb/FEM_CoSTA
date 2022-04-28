@@ -179,9 +179,10 @@ u4 = 1/(1+x+y+z) + (alpha+x-y-z)/(5*t+1)**0.5
 f,u = manufacture_solution(u4,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
+u3 = 1-2*x+3*y**2-z + alpha*x**2 + alpha*x**1.3*z*y**2 -t*2 + x*t*2 - 4*z*t*y
 u1 = u1.subs(z,0)
 u2 = u2.subs(z,0)
-u3 = u3.subs(z,0)
+u3 = u3.subs(z,1)
 u4 = u4.subs(z,0)
 lowdimred = []
 f_1,u_1 = manufacture_solution(u1,t,[x,y], alpha_var=alpha, d1=2,d2=1)

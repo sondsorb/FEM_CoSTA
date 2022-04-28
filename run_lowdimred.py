@@ -57,21 +57,30 @@ class Fem_method:
         self.sol_1 = sol_1
         self.sol_2 = sol_2
         self.pts_1d = pts_1d
-        pts_2d_line = disc.pts[:len(pts_1d)]
+        self.c = len(pts_1d)
+        c=self.c
+        pts_2d_line = disc.pts[c*(c-1)//2:c*(c+1)//2]
+        print(pts_2d_line, pts_1d)
         assert (pts_2d_line[:,0] == pts_1d).all()
         self.name = 'FEM_2'
     def __call__(self, f, u_ex, alpha, callback=None, w_ex=None):
         self.sol_2.set_alpha(self.sol_1.alpha)
         self.fem_model = self.disc.make_model(self.sol_2.f, self.sol_2.u, w_ex=self.sol_2.w)
+        c=self.c
         def new_callback(t,u):
-            u_line = u[:len(self.pts_1d)]
+            u_line = u[c*(c-1)//2:c*(c+1)//2]
             return callback(t,u_line)
         self.fem_model.solve(self.disc.time_steps, T = self.disc.T, callback = new_callback)
-        return self.fem_model.u_fem[:len(self.pts_1d)]
+        return self.fem_model.u_fem[c*(c-1)//2:c*(c+1)//2]
 
-
-xa,xb,ya,yb = 0,1,0,1
-for i in [1]:
+if Ne%2 == 1:
+    Ne -= 1
+    assert Ne>3
+    print(f'\nWARNING; Ne changed to {Ne}!!\n')
+assert Ne%2 == 0 # else u_line definintion in fem is wrong
+xa,xb,ya,yb = 0,1,-0.5,0.5
+for i in [0,1,3]:
+    print(f'sol_index: {i}\n')
     f_1,u_1,f_2,u_2 = functions.lowdimred[i]
     sol_1 = functions.Solution(T=1, f_raw=f_1, u_raw=u_1, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
     sol_2 = functions.Solution(T=1, f_raw=f_2, u_raw=u_2, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
@@ -84,9 +93,9 @@ for i in [1]:
     utils.makefolder(figfolder)
     figname = f'{figfolder}loss_sol{i}{extra_tag}'
     model_folder = f'../master/saved_models/bp_heat/lowdr/{mode}{extra_tag}/interpol/'
-    model.plot=True
-    #model.train(figname=figname, model_folder = model_folder)
-    model.load_weights(model_folder)
+    model.plot=False
+    model.train(figname=figname, model_folder = model_folder)
+    #model.load_weights(model_folder)
 
     #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
     ignore_models = []
