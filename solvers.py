@@ -7,6 +7,40 @@ from tensorflow.keras import layers
 from matplotlib import pyplot as plt, cm
 import json
 
+
+# for tracking memory usage
+def sizeof_fmt(num, suffix='B'):
+    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)
+
+import tracemalloc
+tracemalloc.start()
+
+from pympler import asizeof
+def memory_check(object):
+    total_val = 0
+    print(f'\nExposing object')
+    for key, val in sorted(((name, asizeof.asizeof(val)) for name, val in object.__dict__.items()), key=lambda x: -x[1]):
+        if val > 200:
+            print(sizeof_fmt(val), key)
+        total_val += val
+    print('total val:', sizeof_fmt(total_val))
+
+def memory_check_global():
+    total_val = 0
+    globals_stored = set(globals())
+    print("\nGlobal Variables:")
+    for key, val in sorted(((key, asizeof.asizeof(eval(key))) for key in globals_stored), key=lambda x: -x[1]):
+        if val > 200:
+            print(sizeof_fmt(val), key, type(eval(key)))
+        total_val += val
+    print('total val:', sizeof_fmt(total_val))
+
+
 import FEM
 from utils import merge_first_dims
 import methods
@@ -151,6 +185,10 @@ class Solvers:
         for j, model in enumerate(self.models):
             model.model.load_weights(model_folder+f'{j}_{model.name}_{self.disc.time_steps}_{self.sol.name}')
             model.train(self.train_data, self.val_data, True) # For setting mean/var, it wont fit the model
+            # Show memory usage
+            #memory_check(self)
+            #memory_check(model)
+            #memory_check(model.model)
         print('model weights loaded')
 
     def train(self, model_folder=None, figname=None):
@@ -159,6 +197,7 @@ class Solvers:
         # prepare plotting
         prev_name = ''
         i=-1
+
 
         for j, model in enumerate(self.models):
 
@@ -192,11 +231,28 @@ class Solvers:
                         'val':model.val_hist
                         }))
 
+                # workaround: reload weights, to forget unnecessary stuff filling up memomry
+                model.resetmodel()
+                model.model.load_weights(model_folder+f'{j}_{model.name}_{self.disc.time_steps}_{self.sol.name}')
+            model.train(self.train_data, self.val_data, True) # For setting mean/var, it wont fit the model
             plt.yscale('log')
             plt.xlabel('Number of epochs')
             plt.ylabel('Loss (MSE)')
             plt.legend(title='losses')
             plt.grid()
+            
+            ## Show memory usage
+            ##memory_check_global()
+            #memory_check(self)
+            ##memory_check(model)
+            ##memory_check(model.model)
+
+            #snapshot = tracemalloc.take_snapshot()
+            #top_stats = snapshot.statistics('lineno')
+            #fld = '/home/sir/Desktop/FEM_CoSTA/'
+            #for stat in top_stats:
+            #    if stat[:len(fld)] == fld:
+            #        print(stat[len(fld):])
 
         print(f'\nTime training all models: {datetime.datetime.now()-start_time}')
 

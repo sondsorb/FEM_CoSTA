@@ -52,7 +52,8 @@ NNkwargs = {
 
 
 xa,xb,ya,yb = 0,1,0,1
-for i in [1,0]:
+for i in [4, 5]:
+    print(f'sol_index: {i}\n')
     f,u = functions.dimred[i]
     sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
     

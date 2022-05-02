@@ -166,6 +166,10 @@ class DNN_solver:
         self.noise_level = noise_level
 
         self.model = get_DNN(input_shape=(self.disc.Nv,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_DNN(input_shape=(self.disc.Nv,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
         data = merge_first_dims(data)
@@ -258,6 +262,10 @@ class pgLR_solver:
         self.noise_level = noise_level
 
         self.model = get_pgLR(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_pgLR(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
         data_1 = merge_first_dims(data_1)
@@ -352,6 +360,10 @@ class pgDNN_solver:
         self.noise_level = noise_level
 
         self.model = get_pgDNN(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_pgDNN(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
         data_1 = merge_first_dims(data_1)
@@ -448,6 +460,10 @@ class LSTM_solver:
         self.input_period = input_period
 
         self.model = get_LSTM(input_shape=(self.input_period, self.disc.Nv,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_LSTM(input_shape=(self.input_period, self.disc.Nv,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
 
@@ -545,6 +561,10 @@ class pgLSTM_solver:
         self.input_period = input_period
 
         self.model = get_pgLSTM(input_shape_1=(self.input_period, self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_pgLSTM(input_shape_1=(self.input_period, self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
 
@@ -652,6 +672,10 @@ class CoSTA_DNN_solver:
         self.noise_level = noise_level
 
         self.model = get_DNN(input_shape=(self.disc.Nv,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_DNN(input_shape=(self.disc.Nv,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
         data = merge_first_dims(data)
@@ -740,6 +764,10 @@ class CoSTA_pgLR_solver:
         self.noise_level = noise_level
 
         self.model = get_pgLR(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_pgLR(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
         data_1 = merge_first_dims(data_1)
@@ -844,6 +872,10 @@ class CoSTA_pgDNN_solver:
         self.noise_level = noise_level
 
         self.model = get_pgDNN(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_pgDNN(input_shape_1=(self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
         data_1 = merge_first_dims(data_1)
@@ -948,6 +980,10 @@ class CoSTA_LSTM_solver:
         self.input_period = input_period
 
         self.model = get_LSTM(input_shape=(self.input_period, self.disc.Nv,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_LSTM(input_shape=(self.input_period, self.disc.Nv,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data, set_norm_params):
 
@@ -1066,6 +1102,10 @@ class CoSTA_pgLSTM_solver:
         self.input_period = input_period
 
         self.model = get_pgLSTM(input_shape_1=(self.input_period, self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **NNkwargs)
+        self.NNkwargs = NNkwargs
+
+    def resetmodel(self):
+        self.model = get_pgLSTM(input_shape_1=(self.input_period, self.disc.Nv,), input_shape_2=(2,), output_length = len(self.disc.inner_ids2), **self.NNkwargs)
 
     def __prep_data(self, data_1, data_2, set_norm_params):
 

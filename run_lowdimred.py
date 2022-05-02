@@ -10,6 +10,35 @@ import sympy as sp
 import utils
 import parameters
 
+# for tracking memory usage
+def sizeof_fmt(num, suffix='B'):
+    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)
+
+
+from pympler import asizeof
+def memory_check(object):
+    total_val = 0
+    print(f'\nExposing object')
+    for key, val in sorted(((name, asizeof.asizeof(val)) for name, val in object.__dict__.items()), key=lambda x: -x[1]):
+        if val > 200:
+            print(sizeof_fmt(val), key)
+        total_val += val
+    print('total val:', sizeof_fmt(total_val))
+
+def memory_check_global():
+    total_val = 0
+    globals_stored = set(globals()) - {'sys'}
+    print("\nGlobal Variables:")
+    for key, val in sorted(((key, asizeof.asizeof(eval(key))) for key in globals_stored), key=lambda x: -x[1]):
+        if val > 200:
+            print(sizeof_fmt(val), key, type(eval(key)))
+        total_val += val
+    print('total val:', sizeof_fmt(total_val))
 
 
 mode = 'bugfix'
@@ -74,12 +103,23 @@ class Fem_method:
         return self.fem_model.u_fem[c*(c-1)//2:c*(c+1)//2]
 
 if Ne%2 == 1:
-    Ne -= 1
+    Ne = 20
+    #NoM = 5 #TODO change this back!!!
     assert Ne>3
     print(f'\nWARNING; Ne changed to {Ne}!!\n')
 assert Ne%2 == 0 # else u_line definintion in fem is wrong
+
 xa,xb,ya,yb = 0,1,-0.5,0.5
-for i in [0,1,3]:
+memory_check_global()
+for i in [4, 5]:
+    modelnames = {
+        'DNN' : NoM,
+        #'pgDNN' : NoM,
+        #'LSTM' : NoM,
+        'CoSTA_DNN' : NoM,
+        #'CoSTA_pgDNN' : NoM,
+        #'CoSTA_LSTM' : NoM,
+        }
     print(f'sol_index: {i}\n')
     f_1,u_1,f_2,u_2 = functions.lowdimred[i]
     sol_1 = functions.Solution(T=1, f_raw=f_1, u_raw=u_1, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
@@ -136,3 +176,7 @@ for i in [0,1,3]:
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, ignore_models = ignore_models, legend=legend)
     #figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}_nonstat{extra_tag}'
     #model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
+
+    del model
+
+    #memory_check_global()
