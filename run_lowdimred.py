@@ -111,7 +111,7 @@ assert Ne%2 == 0 # else u_line definintion in fem is wrong
 
 xa,xb,ya,yb = 0,1,-0.5,0.5
 memory_check_global()
-for i in [4, 5]:
+for i in [0,1]:
     modelnames = {
         'DNN' : NoM,
         #'pgDNN' : NoM,
@@ -139,7 +139,7 @@ for i in [4, 5]:
 
     #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
     ignore_models = []
-    legend=True
+    legend=False
 
     # Add 2d FEM model to models
     disc_2d = FEM.Disc(

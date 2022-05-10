@@ -5,6 +5,7 @@ import datetime
 from tensorflow import keras
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt, cm
+plt.rc('font', size=12) #increase font text size from 10
 import json
 
 
