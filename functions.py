@@ -126,6 +126,8 @@ x = sp.symbols('x')
 alpha = sp.symbols('alpha')
 var_k = []
 k_0 = 1
+# extravark: highly varying conductivity
+xvar_k = []
 
 # Testing:
 u = t*x*x
@@ -144,18 +146,31 @@ var_k.append((f,u))
 u = sp.sin(5*alpha*t+x)+sp.sin(alpha*x)/2
 f,u = manufacture_solution(u,t,[x], k=sp.sin(2*alpha*u)/2 + 1, alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
+u = sp.sin(5*alpha*t+x)+sp.sin(alpha*x)/2
+fx,ux = manufacture_solution(u,t,[x], k=sp.sin(2*alpha*u) + 1, alpha_var=alpha, d1=1,d2=1)
+xvar_k.append((fx,ux))
 
 u = sp.cos(x*alpha)*(sp.exp(-t)+sp.exp((t-1))*2)
 f,u = manufacture_solution(u,t,[x], k=alpha*u/10+k_0, alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
+u = sp.cos(x*alpha)*(sp.exp(-t)+sp.exp((t-1))*2)
+fx,ux = manufacture_solution(u,t,[x], k=alpha*u/2+k_0, alpha_var=alpha, d1=1,d2=1)
+xvar_k.append((fx,ux))
 
 u = 1-2*x + alpha*x**2 -t*2 + x*t*2
 f,u = manufacture_solution(u,t,[x], k=sp.exp(u/10), alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
+u = 1-2*x + alpha*x**2 -t*2 + x*t*2
+fx,ux = manufacture_solution(u,t,[x], k=sp.exp(u/4), alpha_var=alpha, d1=1,d2=1)
+xvar_k.append((fx,ux))
 
 u = 1/(1+x) + (alpha+x)/(5*t+1)**0.5
 f,u = manufacture_solution(u,t,[x], k=sp.exp(-u/10), alpha_var=alpha, d1=1,d2=1)
 var_k.append((f,u))
+u = 1/(1+x) + (alpha+x)/(5*t+1)**0.5
+fx,ux = manufacture_solution(u,t,[x], k=sp.exp(-u/4), alpha_var=alpha, d1=1,d2=1)
+xvar_k.append((fx,ux))
+
 
 
 # BP heat
