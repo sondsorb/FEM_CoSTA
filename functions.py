@@ -55,12 +55,12 @@ class Solution:
         self.alpha = alpha
 
     def u(self, x, t=None):
-        if t==None:
+        if t is None:
             t = self.T
         return self.u_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
 
     def f(self, x, t=None):
-        if t==None:
+        if t is None:
             t = self.T
         result = np.array(self.f_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta))
         if self.zero_source:
@@ -68,7 +68,7 @@ class Solution:
         return result
 
     def w(self, x, t=None):
-        if t==None:
+        if t is None:
             t = self.T
         return self.w_raw(x=x, t=t, alpha=self.alpha, time_delta=self.time_delta)
 
@@ -195,11 +195,11 @@ f,u = manufacture_solution(u4,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
 u5 = 5*t*alpha*(x+y-z)**2+2**(x-y+z-alpha)*5*t**0.5
-f,u = manufacture_solution(u4,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+f,u = manufacture_solution(u5,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
 u6 = 1/(1+x+y+z) + sp.log(alpha+x+y+z+2)/(5*t+1)**0.5
-f,u = manufacture_solution(u4,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
+f,u = manufacture_solution(u6,t,[x,y,z], alpha_var=alpha, d1=3,d2=2)
 dimred.append((f,u))
 
 #u3 = 1-2*x+3*y**2-z + alpha*x**2 + alpha*x**1.3*z*y**2 -t*2 + x*t*2 - 4*z*t*y
