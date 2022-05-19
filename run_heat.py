@@ -61,7 +61,7 @@ NNkwargs = {
         'CoSTA_pgLSTM':pgLSTMkwargs, 
         }
 
-for sol_index in [3,4]:
+for sol_index in [5,6]:
     print(f'sol_index: {sol_index}\n')
     f,u = functions.var_k[sol_index]
     solname = f'var_k{sol_index}'

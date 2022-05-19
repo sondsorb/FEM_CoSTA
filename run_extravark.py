@@ -67,7 +67,7 @@ for sol_index in [0,1,2,3]:
     solname = f'xvar_k{sol_index}'
     T = 1
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=not source, name=solname, time_delta=time_delta)
-    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, skip_create_data=False, NNkwargs=NNkwargs)
+    model = solvers.Solvers(modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps, skip_create_data=True, NNkwargs=NNkwargs)
     extra_tag = '' # for different names when testing specific stuff
     figfolder = f'../master/1d_heat_figures/xvark/{mode}/extrapol/'
     utils.makefolder(figfolder)
@@ -76,7 +76,7 @@ for sol_index in [0,1,2,3]:
     figname = f'{figfolder}loss_sol{sol_index}{extra_tag}'
     model.plot=False
     model_folder = f'../master/saved_models/1d_heat/xvark/{mode}{extra_tag}/'
-    model.train(figname=figname, model_folder = model_folder)
+    #model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
 
     #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
@@ -93,7 +93,7 @@ for sol_index in [0,1,2,3]:
 
         result_folder = f'../master/saved_results/1d_heat/xvark/{mode}{extra_tag_2}/interpol/'
         utils.makefolder(result_folder)
-        _ = model.test(interpol = True, result_folder=result_folder)
+        #_ = model.test(interpol = True, result_folder=result_folder)
         figname = f'../master/1d_heat_figures/xvark/{mode}/interpol/sol{sol_index}{extra_tag_2}'
         model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 4, ignore_models = ignore_models, legend=legend)
 
@@ -106,6 +106,6 @@ for sol_index in [0,1,2,3]:
 
         result_folder = f'../master/saved_results/1d_heat/xvark/{mode}{extra_tag_2}/extrapol/'
         utils.makefolder(result_folder)
-        _ = model.test(interpol = False, result_folder=result_folder)
+        #_ = model.test(interpol = False, result_folder=result_folder)
         figname = f'../master/1d_heat_figures/xvark/{mode}/extrapol/sol{sol_index}{extra_tag_2}'
         model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 4, ignore_models = ignore_models, legend=legend)

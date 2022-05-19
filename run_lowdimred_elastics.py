@@ -26,20 +26,7 @@ else:
 Ne, time_steps, DNNkwargs, pgDNNkwargs, LSTMkwargs, pgLSTMkwargs, NoM, time_delta = parameters.set_args(mode = mode, dim=2)
 #time_steps = 100
 
-if len(sys.argv)>2:
-    if sys.argv[2]=='bp':
-        source = 'reduced_source'
-    elif sys.argv[2]=='f':
-        source = 'exact_source'
-    elif sys.argv[2]=='0':
-        source = 'zero_source'
-    elif sys.argv[2]=='nl':
-        source = 'non_linear'
-    else:
-        print('failed reading source term')
-        source = 'exact_source'
-else:
-    source = 'exact_source'
+source = 'reduced_source'
 print('Using', source)
 
 if len(sys.argv)>3:
@@ -71,7 +58,24 @@ NNkwargs = {
         'CoSTA_pgLSTM':pgLSTMkwargs,
         }
 
-#assert not (static and ('LSTM' in modelnames or 'CoSTA_LSTM' in modelnames))
+class Fem_method:
+    # class for making the 2d fem model act as any other model in methods, for solvers workaround with 2 fem models
+    def __init__(self, disc, sol_1, sol_2, pts_1d):
+        self.disc = disc
+        self.sol_1 = sol_1
+        self.sol_2 = sol_2
+        self.pts_1d = pts_1d
+        pts_2d_line = disc.pts[:len(pts_1d)]
+        assert (pts_2d_line[:,0] == pts_1d).all()
+        self.name = 'FEM_2'
+    def __call__(self, f, u_ex, alpha, callback=None, w_ex=None):
+        self.sol_2.set_alpha(self.sol_1.alpha)
+        self.fem_model = self.disc.make_model(self.sol_2.f, self.sol_2.u, w_ex=self.sol_2.w)
+        def new_callback(t,u):
+            u_line = ??#u[:len(self.pts_1d)]
+            return callback(t,u_line)
+        self.fem_model.solve(self.disc.time_steps, T = self.disc.T, callback = new_callback)
+        return self.fem_model.u_fem[:len(self.pts_1d)]
 
 xa,xb,ya,yb = 0,1,0,1
 for i in [0,1,2]:
@@ -79,16 +83,14 @@ for i in [0,1,2]:
     T = 1
     if source == 'reduced_source':
         f,u,w = functions.manufacture_elasticity_solution(d1=3, d2=2, static=static, **functions.ELsols3d[i])
-    else:
-        f,u,w = functions.manufacture_elasticity_solution(d1=2, d2=2, static=static, non_linear=source=='non_linear', **functions.ELsols[i])
     sol = functions.Solution(T=T, f_raw=f, u_raw=u, zero_source=source=='zero_source', name=f'ELsol{i}',w_raw=w)
     
-    model = solvers.Solvers(equation='elasticity', static=static, modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2,skip_create_data=True, NNkwargs=NNkwargs)
+    model = solvers.Solvers(equation='elasticity', static=static, modelnames=modelnames, p=p,sol=sol, Ne=Ne, time_steps=time_steps,xa=xa, xb=xb, ya=ya,yb=yb,dim=2, NNkwargs=NNkwargs)
     extra_tag = '' # for different names when testing specific stuff
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/loss_sol{i}{extra_tag}'
     model_folder = f'../master/saved_models/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/'#_explosions/'
     model.plot=False
-    #model.train(figname=figname, model_folder = model_folder)
+    model.train(figname=figname, model_folder = model_folder)
     #model.load_weights(model_folder)
     
     legend=False
@@ -96,7 +98,7 @@ for i in [0,1,2]:
     # Interpolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
-    #_ = model.test(interpol = True, result_folder=result_folder)
+    _ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5, legend=legend)
     #figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}'
@@ -105,7 +107,7 @@ for i in [0,1,2]:
     # Extrapolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/extrapol/'
     utils.makefolder(result_folder)
-    #_ = model.test(interpol = False, result_folder=result_folder)
+    _ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, legend=legend)
     #figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}'

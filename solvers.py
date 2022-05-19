@@ -5,7 +5,7 @@ import datetime
 from tensorflow import keras
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt, cm
-plt.rc('font', size=12) #increase font text size from 10
+plt.rc('font', size=13) #increase font text size from 10
 import json
 
 
@@ -411,7 +411,7 @@ class Solvers:
         alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
 
         # prepare plotting
-        figsize = (6,4)
+        figsize = (6,3.4)
         if type(statplot) == int:
             statplot = len(self.models) > statplot
         fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
@@ -511,6 +511,8 @@ class Solvers:
             axs[i].grid()
             if legend:
                 axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
+            if axs[i].get_ylim()[1] > 1e3: # if error divergres (>1e3), it plot is capped at 1e2 to better view the interesting stuff
+                axs[i].set_ylim(top=1e2, bottom=axs[i].get_ylim()[0]*8) # bottom is also increased as a workaround to decrease the large white space at the bottom.
 
         plt.tight_layout()
         if figname != None:
