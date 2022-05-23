@@ -564,8 +564,8 @@ class Solvers:
                         u_ex=np.array(graphs2d[f'{alpha}']['exact'])
                         u_fem=np.array(graphs2d[f'{alpha}']['FEM'])
                     if ud==2:
-                        u_ex=np.array(graphs2d[f'{alpha}']['exact'][:,:,j])
-                        u_fem=np.array(graphs2d[f'{alpha}']['FEM'][:,:,j])
+                        u_ex=np.array(graphs2d[f'{alpha}']['exact'])[:,:,j]
+                        u_fem=np.array(graphs2d[f'{alpha}']['FEM'])[:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
@@ -602,7 +602,7 @@ class Solvers:
                     if ud==1:
                         u_ex=np.array(graphs2d[f'{alpha}']['exact'])
                     if ud==2:
-                        u_ex=np.array(graphs2d[f'{alpha}']['exact'][:,:,j])
+                        u_ex=np.array(graphs2d[f'{alpha}']['exact'])[:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
