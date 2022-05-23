@@ -393,20 +393,25 @@ class Solvers:
             figname=None, 
             statplot = 5, 
             ignore_models=[],
-            legend=True
+            legend=True,
+            make_2d_graph=True
             ):
         '''
         interpol - (bool) use interpolating or extrapolating alpha set
         figname - (string or None) filename to save figure to. Not saved if None. .pdf if added to the figname before saving, and should not be included in figname.
         statplot - (bool or int) if plots should be of mean and variance (instead of every solution). If int, then statplot is set to len(models)>statplot
         ignore_models - (list of str) names of models not to include in plots. FEM always included.
+        legend - (bool) if legend should be shown in plots
+        make_2d_graph - (bool) going from final solution to graphs2d takes a long time, if this is already done, put this to false to skip that step by loading from file
         '''
         
+        #print(datetime.datetime.now(), 'started plot_results function')
         # load stuff to plot
         with open(result_folder+f'sol{self.sol.name}_final_solutions.json') as f:
             final_solutions = json.load(f)
         with open(result_folder+f'sol{self.sol.name}_l2_devs.json') as f:
             l2_devs = json.load(f)
+        #print(datetime.datetime.now(), 'files opened')
 
         alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
 
@@ -424,6 +429,8 @@ class Solvers:
             Y2d = np.array([np.linspace(self.disc.ya,self.disc.yb,N+1)]*(N+1))
             pts2d = np.array([X2d,Y2d]).T
 
+        #print(datetime.datetime.now(), 'starting first for loop:')
+
         for i, alpha in enumerate(alphas):
             self.sol.set_alpha(alpha)
 
@@ -432,8 +439,11 @@ class Solvers:
             graphs2d[alpha] = {}
             prev_name = ''
             j=0
+
+            print(datetime.datetime.now(), 0)
             for model in self.models:
                 if not model.name in ignore_models:
+                    #print(datetime.datetime.now(), '00')
                     self.l2_development = []
                     if prev_name != model.name:
                         prev_name = model.name
@@ -442,23 +452,38 @@ class Solvers:
 
                         if self.disc.dim==2:
                             graphs2d[alpha][model.name] = []
+                    #print(datetime.datetime.now(), '01')
                     fem_model.u_fem = np.array(final_solutions[f'{alpha}'][model.name][j])
-                    if self.disc.dim==2:
-                        graphs2d[alpha][model.name].append(fem_model.solution(pts2d))
+                    if self.disc.dim==2 and make_2d_graph:
+                        graphs2d[alpha][model.name].append(fem_model.solution(pts2d).tolist())
                     if self.disc.equation == 'elasticity':
                         graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line)[:,0])
                     else:
                         graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line))
+                    print(datetime.datetime.now(), '02')
                     j+=1
+            #print(datetime.datetime.now(), 1)
             fem_model.u_fem = np.array(final_solutions[f'{alpha}']['FEM'][0])
             graphs1d[alpha]['FEM'] = [fem_model.solution(self.disc.pts_line)]
             graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)]
+            #print(datetime.datetime.now(), 2)
             if self.disc.dim==2:
                 if self.disc.equation == 'elasticity':
                     graphs1d[alpha]['FEM'] = [fem_model.solution(self.disc.pts_line)[:,0]]
                     graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)[:,0]] # only first component is plotted in graph1d for elasticity
-                graphs2d[alpha]['FEM'] = fem_model.solution(pts2d)
-                graphs2d[alpha]['exact'] = self.sol.u(pts2d)
+                graphs2d[alpha]['FEM'] = fem_model.solution(pts2d).tolist()
+                graphs2d[alpha]['exact'] = self.sol.u(pts2d).tolist()
+            #print(datetime.datetime.now(), 3)
+        #print(datetime.datetime.now(), 'finished first for loop')
+
+        # save graphs2d 
+        if self.disc.dim==2:
+            if make_2d_graph:
+                with open(result_folder+f'sol{self.sol.name}_graphs2d.json', "w") as f:
+                    f.write(json.dumps(graphs2d))
+            with open(result_folder+f'sol{self.sol.name}_graphs2d.json') as f:
+                graphs2d = json.load(f)
+        #print(datetime.datetime.now(), 'finished loading gaphs2d')
 
         # plot 1d final solutions
         for i, alpha in enumerate(alphas):
@@ -484,6 +509,8 @@ class Solvers:
             if legend:
                 axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
+        #print(datetime.datetime.now(), 'finished 1d final plots')
+
         plt.tight_layout()
         if figname != None:
             plt.savefig(figname+'.pdf')
@@ -491,6 +518,7 @@ class Solvers:
             plt.show()
         else:
             plt.close()
+        #print(datetime.datetime.now(), '...saved')
 
         # Plot l2 development:
         fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
@@ -513,6 +541,7 @@ class Solvers:
                 axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
             if axs[i].get_ylim()[1] > 1e3: # if error divergres (>1e3), it plot is capped at 1e2 to better view the interesting stuff
                 axs[i].set_ylim(top=1e2, bottom=axs[i].get_ylim()[0]*8) # bottom is also increased as a workaround to decrease the large white space at the bottom.
+        #print(datetime.datetime.now(), 'finished l2 dev plots')
 
         plt.tight_layout()
         if figname != None:
@@ -521,6 +550,7 @@ class Solvers:
             plt.show()
         else:
             plt.close()
+        #print(datetime.datetime.now(), '...saved')
 
         # plot 2d stuff
         if self.disc.dim==2 and statplot:
@@ -531,11 +561,11 @@ class Solvers:
             for i, alpha in enumerate(alphas):
                 for j in range(ud):
                     if ud==1:
-                        u_ex=graphs2d[alpha]['exact']
-                        u_fem=graphs2d[alpha]['FEM']
+                        u_ex=np.array(graphs2d[f'{alpha}']['exact'])
+                        u_fem=np.array(graphs2d[f'{alpha}']['FEM'])
                     if ud==2:
-                        u_ex=graphs2d[alpha]['exact'][:,:,j]
-                        u_fem=graphs2d[alpha]['FEM'][:,:,j]
+                        u_ex=np.array(graphs2d[f'{alpha}']['exact'][:,:,j])
+                        u_fem=np.array(graphs2d[f'{alpha}']['FEM'][:,:,j])
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
@@ -547,9 +577,9 @@ class Solvers:
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
                             if ud==1:
-                                u_mean = np.mean(np.array(graphs2d[alpha][name]),axis=0)
+                                u_mean = np.mean(np.array(graphs2d[f'{alpha}'][name]),axis=0)
                             if ud==2:
-                                u_mean = np.mean(np.array(graphs2d[alpha][name]),axis=0)[:,:,j]
+                                u_mean = np.mean(np.array(graphs2d[f'{alpha}'][name]),axis=0)[:,:,j]
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(2+k)+1)
                             im = ax.imshow(u_mean-u_ex, cmap=cm.coolwarm)
                             plt.colorbar(im, ax=ax)
@@ -563,14 +593,16 @@ class Solvers:
             else:
                 plt.close()
 
+            #print(datetime.datetime.now(), 'finished 2d sol plots')
+
             nh = len(self.modelnames)+1 # + models + FEM and exact
             fig = plt.figure(figsize=(4.2*nw,3.2*nh))
             for i, alpha in enumerate(alphas):
                 for j in range(ud):
                     if ud==1:
-                        u_ex=graphs2d[alpha]['exact']
+                        u_ex=np.array(graphs2d[f'{alpha}']['exact'])
                     if ud==2:
-                        u_ex=graphs2d[alpha]['exact'][:,:,j]
+                        u_ex=np.array(graphs2d[f'{alpha}']['exact'][:,:,j])
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
@@ -578,9 +610,9 @@ class Solvers:
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
                             if ud==1:
-                                u_std = np.std(np.array(graphs2d[alpha][name]),axis=0, ddof=1)
+                                u_std = np.std(np.array(graphs2d[f'{alpha}'][name]),axis=0, ddof=1)
                             if ud==2:
-                                u_std = np.std(np.array(graphs2d[alpha][name]),axis=0, ddof=1)[:,:,j]
+                                u_std = np.std(np.array(graphs2d[f'{alpha}'][name]),axis=0, ddof=1)[:,:,j]
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(1+k)+1)
                             im = ax.imshow(u_std, cmap=cm.coolwarm)
                             plt.colorbar(im, ax=ax)
@@ -593,3 +625,4 @@ class Solvers:
                 plt.show()
             else:
                 plt.close()
+            #print(datetime.datetime.now(), 'finished 2d std plots')

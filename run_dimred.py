@@ -68,13 +68,14 @@ for i in [0,1,4, 5]:
     #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
     ignore_models = []
     legend=False
+    make_2d_graph=True
     
     # Interpolation
     result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
     #_ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/bp_heat_figures/{mode}/interpol/sol{i}{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5, ignore_models = ignore_models, legend=legend)
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 2, ignore_models = ignore_models, legend=legend, make_2d_graph=make_2d_graph)
     #figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}_nonstat{extra_tag}'
     #model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
     
@@ -83,6 +84,6 @@ for i in [0,1,4, 5]:
     utils.makefolder(result_folder)
     #_ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{i}{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, ignore_models = ignore_models, legend=legend)
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, ignore_models = ignore_models, legend=legend, make_2d_graph=make_2d_graph)
     #figname = f'../master/bp_heat_figures/{mode}/extrapol/sol{x}_nonstat{extra_tag}'
     #model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)

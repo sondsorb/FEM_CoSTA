@@ -92,13 +92,14 @@ for i in [0,1,2]:
     #model.load_weights(model_folder)
     
     legend=False
+    make_2d_graph=True
 
     # Interpolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'
     utils.makefolder(result_folder)
     #_ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5, legend=legend)
+    model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 5, legend=legend, make_2d_graph=make_2d_graph)
     #figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}interpol/sol{i}_nonstat{extra_tag}'
     #model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = False)
 
@@ -107,6 +108,6 @@ for i in [0,1,2]:
     utils.makefolder(result_folder)
     #_ = model.test(interpol = False, result_folder=result_folder)
     figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}{extra_tag}'
-    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, legend=legend)
+    model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = 5, legend=legend, make_2d_graph=make_2d_graph)
     #figname = f'../master/2d_elastic_figures/{source}/{mode}/{"static_"if static else ""}extrapol/sol{i}_nonstat{extra_tag}'
     #model.plot_results(result_folder=result_folder, interpol = False, figname=figname, statplot = False)
