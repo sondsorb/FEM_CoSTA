@@ -440,10 +440,8 @@ class Solvers:
             prev_name = ''
             j=0
 
-            print(datetime.datetime.now(), 0)
             for model in self.models:
                 if not model.name in ignore_models:
-                    #print(datetime.datetime.now(), '00')
                     self.l2_development = []
                     if prev_name != model.name:
                         prev_name = model.name
@@ -452,7 +450,6 @@ class Solvers:
 
                         if self.disc.dim==2:
                             graphs2d[alpha][model.name] = []
-                    #print(datetime.datetime.now(), '01')
                     fem_model.u_fem = np.array(final_solutions[f'{alpha}'][model.name][j])
                     if self.disc.dim==2 and make_2d_graph:
                         graphs2d[alpha][model.name].append(fem_model.solution(pts2d).tolist())
@@ -460,20 +457,16 @@ class Solvers:
                         graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line)[:,0])
                     else:
                         graphs1d[alpha][model.name].append(fem_model.solution(self.disc.pts_line))
-                    print(datetime.datetime.now(), '02')
                     j+=1
-            #print(datetime.datetime.now(), 1)
             fem_model.u_fem = np.array(final_solutions[f'{alpha}']['FEM'][0])
             graphs1d[alpha]['FEM'] = [fem_model.solution(self.disc.pts_line)]
             graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)]
-            #print(datetime.datetime.now(), 2)
             if self.disc.dim==2:
                 if self.disc.equation == 'elasticity':
                     graphs1d[alpha]['FEM'] = [fem_model.solution(self.disc.pts_line)[:,0]]
                     graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)[:,0]] # only first component is plotted in graph1d for elasticity
                 graphs2d[alpha]['FEM'] = fem_model.solution(pts2d).tolist()
                 graphs2d[alpha]['exact'] = self.sol.u(pts2d).tolist()
-            #print(datetime.datetime.now(), 3)
         #print(datetime.datetime.now(), 'finished first for loop')
 
         # save graphs2d 
@@ -569,7 +562,7 @@ class Solvers:
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
-                    plt.title(f'exact u[{j}],a={alpha}')
+                    plt.title(fr'exact u[{j}],$\alpha$={alpha}')
                     ax = fig.add_subplot(nh,nw,ud*i+j+nw+1)
                     im = ax.imshow(u_fem-u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
@@ -583,7 +576,7 @@ class Solvers:
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(2+k)+1)
                             im = ax.imshow(u_mean-u_ex, cmap=cm.coolwarm)
                             plt.colorbar(im, ax=ax)
-                            plt.title(f'mean {name} error')
+                            plt.title(f'mean {"CoSTA" if name=="CoSTA_DNN" else name} error')
 
             plt.tight_layout()
             if figname != None:
@@ -606,7 +599,7 @@ class Solvers:
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cm.coolwarm)
                     plt.colorbar(im, ax=ax)
-                    plt.title(f'exact u[{j}],a={alpha}')
+                    plt.title(fr'exact u[{j}],$\alpha$={alpha}')
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
                             if ud==1:
@@ -616,7 +609,7 @@ class Solvers:
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(1+k)+1)
                             im = ax.imshow(u_std, cmap=cm.coolwarm)
                             plt.colorbar(im, ax=ax)
-                            plt.title(f'std {name} error')
+                            plt.title(f'std {"CoSTA" if name=="CoSTA_DNN" else name} error')
 
             plt.tight_layout()
             if figname != None:
