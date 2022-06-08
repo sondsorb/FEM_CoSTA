@@ -52,7 +52,7 @@ NNkwargs = {
 
 
 xa,xb,ya,yb = 0,1,0,1
-for i in [0,1,4, 5]:
+for i in [0 ,4, 5, 1]:
     print(f'sol_index: {i}\n')
     f,u = functions.dimred[i]
     sol = functions.Solution(T=1, f_raw=f, u_raw=u, zero_source=False, name=f'DR_{i}', time_delta=time_delta)
@@ -68,7 +68,7 @@ for i in [0,1,4, 5]:
     #ignore_models = ['pgDNN', 'CoSTA_pgDNN']
     ignore_models = []
     legend=False
-    make_2d_graph=True
+    make_2d_graph=False
     
     # Interpolation
     result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/interpol/'

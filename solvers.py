@@ -404,6 +404,7 @@ class Solvers:
         legend - (bool) if legend should be shown in plots
         make_2d_graph - (bool) going from final solution to graphs2d takes a long time, if this is already done, put this to false to skip that step by loading from file
         '''
+        cmap = cm.coolwarm#CMRmap#cm.coolwarm
         
         #print(datetime.datetime.now(), 'started plot_results function')
         # load stuff to plot
@@ -546,11 +547,18 @@ class Solvers:
         #print(datetime.datetime.now(), '...saved')
 
         # plot 2d stuff
+        def add_cbar(im, ax, ud):
+            minval, maxval = im.get_clim()
+            minval = min(minval, -maxval)
+            maxval = max(maxval, -minval)
+            im.set_clim(minval, maxval)
+            cbar = plt.colorbar(im, ax=ax, location='bottom' if ud==2 else None)
+            cbar.ax.tick_params(rotation=45)
         if self.disc.dim==2 and statplot:
             ud = self.disc.udim
             nw = ud * len(alphas)
             nh = len(self.modelnames)+2 # + models + FEM and exact
-            fig = plt.figure(figsize=(4.2*nw,3.2*nh))
+            fig = plt.figure(figsize=(4.2*len(alphas)*ud**0.5,3.2*nh*ud**0.2))
             for i, alpha in enumerate(alphas):
                 for j in range(ud):
                     if ud==1:
@@ -560,12 +568,13 @@ class Solvers:
                         u_ex=np.array(graphs2d[f'{alpha}']['exact'])[:,:,j]
                         u_fem=np.array(graphs2d[f'{alpha}']['FEM'])[:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
-                    im = ax.imshow(u_ex, cmap=cm.coolwarm)
-                    plt.colorbar(im, ax=ax)
+                    im = ax.imshow(u_ex, cmap=cmap)
+                    cbar = plt.colorbar(im, ax=ax, location='bottom' if ud==2 else None)
+                    cbar.ax.tick_params(rotation=45)
                     plt.title(fr'exact u[{j}],$\alpha$={alpha}')
                     ax = fig.add_subplot(nh,nw,ud*i+j+nw+1)
-                    im = ax.imshow(u_fem-u_ex, cmap=cm.coolwarm)
-                    plt.colorbar(im, ax=ax)
+                    im = ax.imshow(u_fem-u_ex, cmap=cmap)
+                    add_cbar(im, ax, ud)
                     plt.title(f'fem error')
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
@@ -574,9 +583,9 @@ class Solvers:
                             if ud==2:
                                 u_mean = np.mean(np.array(graphs2d[f'{alpha}'][name]),axis=0)[:,:,j]
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(2+k)+1)
-                            im = ax.imshow(u_mean-u_ex, cmap=cm.coolwarm)
-                            plt.colorbar(im, ax=ax)
-                            plt.title(f'mean {"CoSTA" if name=="CoSTA_DNN" else name} error')
+                            im = ax.imshow(u_mean-u_ex, cmap=cmap)
+                            add_cbar(im, ax, ud)
+                            plt.title(f'mean {"CoSTA" if name=="CoSTA_DNN" else "DDM" if name=="DNN" else name} error')
 
             plt.tight_layout()
             if figname != None:
@@ -597,8 +606,8 @@ class Solvers:
                     if ud==2:
                         u_ex=np.array(graphs2d[f'{alpha}']['exact'])[:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
-                    im = ax.imshow(u_ex, cmap=cm.coolwarm)
-                    plt.colorbar(im, ax=ax)
+                    im = ax.imshow(u_ex, cmap=cmap)
+                    plt.colorbar(im, ax=ax, location='bottom' if ud==2 else None)
                     plt.title(fr'exact u[{j}],$\alpha$={alpha}')
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
@@ -607,9 +616,9 @@ class Solvers:
                             if ud==2:
                                 u_std = np.std(np.array(graphs2d[f'{alpha}'][name]),axis=0, ddof=1)[:,:,j]
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(1+k)+1)
-                            im = ax.imshow(u_std, cmap=cm.coolwarm)
-                            plt.colorbar(im, ax=ax)
-                            plt.title(f'std {"CoSTA" if name=="CoSTA_DNN" else name} error')
+                            im = ax.imshow(u_std, cmap=cmap)
+                            add_cbar(im, ax, ud)
+                            plt.title(f'std {"CoSTA" if name=="CoSTA_DNN" else "DDM" if name=="DNN" else name} error')
 
             plt.tight_layout()
             if figname != None:

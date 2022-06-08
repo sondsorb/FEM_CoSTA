@@ -92,7 +92,7 @@ for i in [0,1,2]:
     #model.load_weights(model_folder)
     
     legend=False
-    make_2d_graph=True
+    make_2d_graph=False
 
     # Interpolation
     result_folder = f'../master/saved_results/2d_elastic/{"static_"if static else ""}{source}/{mode}{extra_tag}/interpol/'

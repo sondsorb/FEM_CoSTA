@@ -1,11 +1,8 @@
 #!/bin/bash
 
-python preproj.py 0 0 1
-#python preproj.py 0 0 2
-#python preproj.py 0 f 1
-python preproj.py 1 0 1
-#python preproj.py 1 0 2
-#python preproj.py 1 f 1
-python preproj.py 2 0 1
-#python preproj.py 2 0 2
-#python preproj.py 2 f 1
+python run_elastics.py 1 nl
+python run_elastics.py 3 f
+python run_elastics.py 3 0
+python run_elastics.py 3 bp
+
+
