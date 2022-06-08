@@ -140,7 +140,7 @@ def plot_bars(result_folders, solnames, figname=None):
                         if lstsc['CoSTA_DNN'][k]/10**2 > lstsc['DNN'][k] and lstsc['CoSTA_DNN'][k]/10**2 > lstsc['FEM'][k]:
                             losses['CoSTA_DNN'][3] += 1
 
-    return
+    return # to not plot bar plots of integrated error, but step function of wins/losses
 
     # Prepare plotting
     plt.figure(figsize=(6,3.4))

@@ -406,13 +406,11 @@ class Solvers:
         '''
         cmap = cm.coolwarm#CMRmap#cm.coolwarm
         
-        #print(datetime.datetime.now(), 'started plot_results function')
         # load stuff to plot
         with open(result_folder+f'sol{self.sol.name}_final_solutions.json') as f:
             final_solutions = json.load(f)
         with open(result_folder+f'sol{self.sol.name}_l2_devs.json') as f:
             l2_devs = json.load(f)
-        #print(datetime.datetime.now(), 'files opened')
 
         alphas = self.alpha_test_interpol if interpol else self.alpha_test_extrapol
 
@@ -429,8 +427,6 @@ class Solvers:
             X2d = np.array([np.linspace(self.disc.xa,self.disc.xb,N+1)]*(N+1)).T
             Y2d = np.array([np.linspace(self.disc.ya,self.disc.yb,N+1)]*(N+1))
             pts2d = np.array([X2d,Y2d]).T
-
-        #print(datetime.datetime.now(), 'starting first for loop:')
 
         for i, alpha in enumerate(alphas):
             self.sol.set_alpha(alpha)
@@ -468,7 +464,6 @@ class Solvers:
                     graphs1d[alpha]['exact'] = [self.sol.u(self.disc.pts_line)[:,0]] # only first component is plotted in graph1d for elasticity
                 graphs2d[alpha]['FEM'] = fem_model.solution(pts2d).tolist()
                 graphs2d[alpha]['exact'] = self.sol.u(pts2d).tolist()
-        #print(datetime.datetime.now(), 'finished first for loop')
 
         # save graphs2d 
         if self.disc.dim==2:
@@ -477,7 +472,6 @@ class Solvers:
                     f.write(json.dumps(graphs2d))
             with open(result_folder+f'sol{self.sol.name}_graphs2d.json') as f:
                 graphs2d = json.load(f)
-        #print(datetime.datetime.now(), 'finished loading gaphs2d')
 
         # plot 1d final solutions
         for i, alpha in enumerate(alphas):
@@ -503,8 +497,6 @@ class Solvers:
             if legend:
                 axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
 
-        #print(datetime.datetime.now(), 'finished 1d final plots')
-
         plt.tight_layout()
         if figname != None:
             plt.savefig(figname+'.pdf')
@@ -512,7 +504,6 @@ class Solvers:
             plt.show()
         else:
             plt.close()
-        #print(datetime.datetime.now(), '...saved')
 
         # Plot l2 development:
         fig, axs = plt.subplots(1,len(alphas), figsize=figsize)
@@ -535,7 +526,6 @@ class Solvers:
                 axs[i].legend(title=f'sol={self.sol.name},a={alpha}')
             if axs[i].get_ylim()[1] > 1e3: # if error divergres (>1e3), it plot is capped at 1e2 to better view the interesting stuff
                 axs[i].set_ylim(top=1e2, bottom=axs[i].get_ylim()[0]*8) # bottom is also increased as a workaround to decrease the large white space at the bottom.
-        #print(datetime.datetime.now(), 'finished l2 dev plots')
 
         plt.tight_layout()
         if figname != None:
@@ -544,7 +534,6 @@ class Solvers:
             plt.show()
         else:
             plt.close()
-        #print(datetime.datetime.now(), '...saved')
 
         # plot 2d stuff
         def add_cbar(im, ax, ud):
@@ -595,8 +584,6 @@ class Solvers:
             else:
                 plt.close()
 
-            #print(datetime.datetime.now(), 'finished 2d sol plots')
-
             nh = len(self.modelnames)+1 # + models + FEM and exact
             fig = plt.figure(figsize=(4.2*nw,3.2*nh))
             for i, alpha in enumerate(alphas):
@@ -627,4 +614,3 @@ class Solvers:
                 plt.show()
             else:
                 plt.close()
-            #print(datetime.datetime.now(), 'finished 2d std plots')

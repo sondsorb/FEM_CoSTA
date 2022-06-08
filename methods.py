@@ -30,7 +30,6 @@ def test_linearity(model, input_shape_1, input_shape_2, output_length):
 def lrelu(x, alpha=0.01):
     return tf.keras.activations.relu(x, alpha=alpha)#, threshold=0,  max_value=0.01)
     #return tf.keras.activations.relu(x, alpha=0.3)#, threshold=0,  max_value=0.01)
-#lrelu=keras.activations.sigmoid
 
 def get_DNN(input_shape, output_length, depth, bn_depth, lr, n_layers_1=1, n_layers_2=2, l1_penalty=0, activation=lrelu):
 
