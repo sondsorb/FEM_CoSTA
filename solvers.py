@@ -537,6 +537,11 @@ class Solvers:
 
         # plot 2d stuff
         def add_cbar(im, ax, ud):
+            ax.invert_yaxis()
+            ax.set_xticks([0,len(self.disc.pts_line)])
+            ax.set_xticklabels([0,1]) # NOTE: hardcoded x,y \in [0,1]
+            ax.set_yticks([0,len(self.disc.pts_line)])
+            ax.set_yticklabels([0,1])
             minval, maxval = im.get_clim()
             minval = min(minval, -maxval)
             maxval = max(maxval, -minval)
@@ -547,7 +552,7 @@ class Solvers:
             ud = self.disc.udim
             nw = ud * len(alphas)
             nh = len(self.modelnames)+2 # + models + FEM and exact
-            fig = plt.figure(figsize=(4.2*len(alphas)*ud**0.5,3.2*nh*ud**0.2))
+            fig = plt.figure(figsize=(4.2*len(alphas)*ud**0.5,3.2*nh*ud**0.3))
             for i, alpha in enumerate(alphas):
                 for j in range(ud):
                     if ud==1:
@@ -558,13 +563,18 @@ class Solvers:
                         u_fem=np.array(graphs2d[f'{alpha}']['FEM'])[:,:,j]
                     ax = fig.add_subplot(nh,nw,ud*i+j+1)
                     im = ax.imshow(u_ex, cmap=cmap)
+                    ax.set_xticks([0,len(self.disc.pts_line)])
+                    ax.set_xticklabels([0,1])
+                    ax.set_yticks([0,len(self.disc.pts_line)])
+                    ax.set_yticklabels([0,1])
+                    ax.invert_yaxis()
                     cbar = plt.colorbar(im, ax=ax, location='bottom' if ud==2 else None)
                     cbar.ax.tick_params(rotation=45)
                     plt.title(fr'exact u[{j}],$\alpha$={alpha}')
                     ax = fig.add_subplot(nh,nw,ud*i+j+nw+1)
                     im = ax.imshow(u_fem-u_ex, cmap=cmap)
                     add_cbar(im, ax, ud)
-                    plt.title(f'fem error')
+                    plt.title(f'PBM error')
                     for k, name in enumerate(self.modelnames):
                         if not model.name in ignore_models:
                             if ud==1:
@@ -574,7 +584,7 @@ class Solvers:
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(2+k)+1)
                             im = ax.imshow(u_mean-u_ex, cmap=cmap)
                             add_cbar(im, ax, ud)
-                            plt.title(f'mean {"CoSTA" if name=="CoSTA_DNN" else "DDM" if name=="DNN" else name} error')
+                            plt.title('mean '+{"CoSTA_DNN":"CoSTA", "DNN":"DDM", "FEM":"PBM"}[name]+' error')
 
             plt.tight_layout()
             if figname != None:
@@ -605,7 +615,7 @@ class Solvers:
                             ax = fig.add_subplot(nh,nw,ud*i+j+nw*(1+k)+1)
                             im = ax.imshow(u_std, cmap=cmap)
                             add_cbar(im, ax, ud)
-                            plt.title(f'std {"CoSTA" if name=="CoSTA_DNN" else "DDM" if name=="DNN" else name} error')
+                            plt.title('mean '+{"CoSTA_DNN":"CoSTA", "DNN":"DDM", "FEM":"PBM"}[name]+' error')
 
             plt.tight_layout()
             if figname != None:

@@ -71,9 +71,9 @@ for i in [0 ,4, 5, 1]:
     make_2d_graph=False
     
     # Interpolation
-    result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/interpol/'
-    utils.makefolder(result_folder)
-    #_ = model.test(interpol = True, result_folder=result_folder)
+    #result_folder = f'../master/saved_results/bp_heat/{mode}{extra_tag}/interpol/'
+    #utils.makefolder(result_folder)
+    ##_ = model.test(interpol = True, result_folder=result_folder)
     figname = f'../master/bp_heat_figures/{mode}/interpol/sol{i}{extra_tag}'
     model.plot_results(result_folder=result_folder, interpol = True, figname=figname, statplot = 2, ignore_models = ignore_models, legend=legend, make_2d_graph=make_2d_graph)
     #figname = f'../master/bp_heat_figures/{mode}/interpol/sol{x}_nonstat{extra_tag}'

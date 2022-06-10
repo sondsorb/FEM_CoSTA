@@ -216,7 +216,6 @@ def plotall():
     result_folders = [f'../master/saved_results/2d_elastic/{source}/quick_test/interpol/',f'../master/saved_results/2d_elastic/{source}/quick_test/extrapol/']
     plot_bars(result_folders=result_folders,solnames=solnames, figname='../master/all/nl')
 
-
 reset()
 plotall()
 print(wins)
@@ -227,7 +226,7 @@ for arg in winbys:
     winbys[arg].append(1)
     y = -np.arange(len(winbys[arg]))-1 + len(winbys[arg])
     x = np.sort(np.array(winbys[arg]))
-    plt.step(x,y, where='post', color=COLORS[arg], label='CoSTA' if arg=='CoSTA_DNN' else arg)
+    plt.step(x,y, where='post', color=COLORS[arg], label={"CoSTA_DNN":"CoSTA", "DNN":"DDM", "FEM":"PBM"}[arg])
 
 reset()
 addstd = True
@@ -237,27 +236,32 @@ for arg in winbys:
     winbys[arg].append(1)
     y = -np.arange(len(winbys[arg]))-1 + len(winbys[arg])
     x = np.sort(np.array(winbys[arg]))
-    plt.step(x,y, '--', where='post', color=COLORS[arg])#, label=f'{'CoSTA' if arg=='CoSTA_DNN' else arg}')
+    plt.step(x,y, ':', where='post', color=COLORS[arg])#, label=f'{'CoSTA' if arg=='CoSTA_DNN' else arg}')
 
 plt.xscale('log')
 plt.ylim(bottom=0)
 plt.xlim(left=1)
+plt.xlabel('Significance threshold')
+plt.ylabel('Number of wins')
 plt.legend()
+plt.savefig('../master/all/wins.pdf')
 plt.show()
 
 
 
 reset()
 plotall()
-print(wins)
-print(losses)
-#print(winbys)
 
 for arg in winbys:
     losebys[arg].append(1)
     y = -np.arange(len(losebys[arg]))-1 + len(losebys[arg])
+    #print(y)
     x = np.sort(np.array(losebys[arg]))
-    plt.step(x,y, where='post', color=COLORS[arg], label='CoSTA' if arg=='CoSTA_DNN' else arg)
+    #print(x)
+    plt.step(x,y, where='post', color=COLORS[arg], label={"CoSTA_DNN":"CoSTA", "DNN":"DDM", "FEM":"PBM"}[arg])
+    if arg=='DNN': # workaround since inf is not plotted
+        plt.plot([x[-3], 1e5],[2,2], color=COLORS[arg])
+        plt.xlim(right=1357.3)
 
 reset()
 addstd = True
@@ -267,10 +271,14 @@ for arg in winbys:
     losebys[arg].append(1)
     y = -np.arange(len(losebys[arg]))-1 + len(losebys[arg])
     x = np.sort(np.array(losebys[arg]))
-    plt.step(x,y, '--', where='post', color=COLORS[arg])#, label=f'{'CoSTA' if arg=='CoSTA_DNN' else arg}')
+    plt.step(x,y, ':', where='post', color=COLORS[arg])#, label=f'{'CoSTA' if arg=='CoSTA_DNN' else arg}')
 
 plt.xscale('log')
 plt.ylim(bottom=0)
 plt.xlim(left=1)
+plt.xlabel('Significance threshold')
+plt.ylabel('Number of losses')
 plt.legend()
+plt.savefig('../master/all/losses.pdf')
 plt.show()
+
